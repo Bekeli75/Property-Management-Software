@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
 import Logo from '@/components/Logo';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 export default function TenantsPage() {
   const { user, isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
@@ -12,6 +13,8 @@ export default function TenantsPage() {
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [users, setUsers] = useState([]);
   const [formData, setFormData] = useState({
     user_id: '',
@@ -92,13 +95,15 @@ export default function TenantsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this tenant?')) return;
-
+    setDeleting(true);
     try {
       await apiClient.deleteTenant(id);
       fetchTenants();
     } catch (error) {
       console.error('Failed to delete tenant:', error);
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -239,7 +244,7 @@ export default function TenantsPage() {
                       </button>
                       {(isOwner || isAdmin) && (
                         <button
-                          onClick={() => handleDelete(tenant.id)}
+                          onClick={() => setDeleteId(tenant.id)}
                           className="text-red-600 hover:text-red-900"
                         >
                           Delete
@@ -412,6 +417,14 @@ export default function TenantsPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={deleteId !== null}
+        title="Delete tenant?"
+        message="This will remove the tenant record from your workspace. This action cannot be undone."
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => handleDelete(deleteId)}
+        loading={deleting}
+      />
     </div>
   );
 }

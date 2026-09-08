@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import apiClient from '@/lib/api';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 export default function PropertyUnitsPage() {
   const { user, isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
@@ -13,6 +14,8 @@ export default function PropertyUnitsPage() {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({
     property_id: params.id,
     unit_number: '',
@@ -81,13 +84,15 @@ export default function PropertyUnitsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this unit?')) return;
-
+    setDeleting(true);
     try {
       await apiClient.deleteUnit(id);
       fetchUnits();
     } catch (error) {
       console.error('Failed to delete unit:', error);
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -196,7 +201,7 @@ export default function PropertyUnitsPage() {
                     </button>
                     {(isOwner || isAdmin) && (
                       <button
-                        onClick={() => handleDelete(unit.id)}
+                        onClick={() => setDeleteId(unit.id)}
                         className="px-3 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition text-sm"
                       >
                         Delete
@@ -356,6 +361,14 @@ export default function PropertyUnitsPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={deleteId !== null}
+        title="Delete unit?"
+        message="This will remove the unit from the property. This action cannot be undone."
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => handleDelete(deleteId)}
+        loading={deleting}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
 import Logo from '@/components/Logo';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 export default function MaintenancePage() {
   const { user, isAuthenticated, isOwner, isManager, isAdmin, isTenant } = useAuth();
@@ -12,6 +13,8 @@ export default function MaintenancePage() {
   const [maintenanceRequests, setMaintenanceRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [properties, setProperties] = useState([]);
   const [units, setUnits] = useState([]);
   const [tenants, setTenants] = useState([]);
@@ -141,13 +144,15 @@ export default function MaintenancePage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this maintenance request?')) return;
-
+    setDeleting(true);
     try {
       await apiClient.deleteMaintenanceRequest(id);
       fetchMaintenanceRequests();
     } catch (error) {
       console.error('Failed to delete maintenance request:', error);
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -282,7 +287,7 @@ export default function MaintenancePage() {
                     )}
                     {(isOwner || isAdmin) && (
                       <button
-                        onClick={() => handleDelete(request.id)}
+                        onClick={() => setDeleteId(request.id)}
                         className="px-3 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition text-sm"
                       >
                         Delete
@@ -440,6 +445,14 @@ export default function MaintenancePage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={deleteId !== null}
+        title="Delete maintenance request?"
+        message="This will remove the maintenance request and its history. This action cannot be undone."
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => handleDelete(deleteId)}
+        loading={deleting}
+      />
     </div>
   );
 }

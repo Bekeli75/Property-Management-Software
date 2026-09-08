@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import apiClient from '@/lib/api';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 export default function PropertyDetailPage() {
   const { user, isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
@@ -12,6 +13,8 @@ export default function PropertyDetailPage() {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editFormData, setEditFormData] = useState({});
 
   const fetchProperty = useCallback(async () => {
@@ -52,13 +55,14 @@ export default function PropertyDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this property?')) return;
-
+    setDeleting(true);
     try {
       await apiClient.deleteProperty(params.id);
       router.push('/properties');
     } catch (error) {
       console.error('Failed to delete property:', error);
+      setDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -115,7 +119,7 @@ export default function PropertyDetailPage() {
                       Edit
                     </button>
                     <button
-                      onClick={handleDelete}
+                      onClick={() => setShowDeleteDialog(true)}
                       className="px-3 py-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition text-sm"
                     >
                       Delete
@@ -377,6 +381,14 @@ export default function PropertyDetailPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={showDeleteDialog}
+        title="Delete property?"
+        message="This will remove the property and its units from your workspace. This action cannot be undone."
+        onCancel={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        loading={deleting}
+      />
     </div>
   );
 }

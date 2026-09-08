@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
 import Logo from '@/components/Logo';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 export default function PaymentsPage() {
   const { user, isAuthenticated, isOwner, isManager, isAdmin, isTenant } = useAuth();
@@ -12,6 +13,8 @@ export default function PaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [showChapaModal, setShowChapaModal] = useState(false);
   const [leases, setLeases] = useState([]);
   const [tenants, setTenants] = useState([]);
@@ -122,13 +125,15 @@ export default function PaymentsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this payment?')) return;
-
+    setDeleting(true);
     try {
       await apiClient.deletePayment(id);
       fetchPayments();
     } catch (error) {
       console.error('Failed to delete payment:', error);
+    } finally {
+      setDeleting(false);
+      setDeleteId(null);
     }
   };
 
@@ -285,7 +290,7 @@ export default function PaymentsPage() {
                       </button>
                       {(isOwner || isAdmin) && (
                         <button
-                          onClick={() => handleDelete(payment.id)}
+                          onClick={() => setDeleteId(payment.id)}
                           className="text-red-600 hover:text-red-900"
                         >
                           Delete
@@ -553,6 +558,14 @@ export default function PaymentsPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={deleteId !== null}
+        title="Delete payment?"
+        message="This will remove the payment record from your workspace. This action cannot be undone."
+        onCancel={() => setDeleteId(null)}
+        onConfirm={() => handleDelete(deleteId)}
+        loading={deleting}
+      />
     </div>
   );
 }
