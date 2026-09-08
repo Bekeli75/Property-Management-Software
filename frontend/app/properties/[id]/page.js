@@ -51,7 +51,10 @@ export default function PropertyDetailPage() {
         if (['image_1', 'image_2', 'image_3'].includes(key) || value === null || value === undefined) return;
         payload.append(key, value);
       });
-      Object.entries(imageFiles).forEach(([key, file]) => { if (file) payload.append(key, file); });
+      Object.entries(imageFiles).forEach(([key, image]) => {
+        if (image?.file) payload.append(key, image.file);
+        if (image?.remove) payload.append(`remove_${key}`, '1');
+      });
       const response = await apiClient.updateProperty(params.id, payload);
       if (response.success) {
         setShowEditModal(false);

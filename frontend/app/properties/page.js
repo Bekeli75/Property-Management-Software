@@ -61,7 +61,9 @@ export default function PropertiesPage() {
     try {
       const payload = new FormData();
       Object.entries(formData).forEach(([key, value]) => { if (value !== '') payload.append(key, value); });
-      Object.entries(imageFiles).forEach(([key, file]) => { if (file) payload.append(key, file); });
+      Object.entries(imageFiles).forEach(([key, image]) => {
+        if (image?.file) payload.append(key, image.file);
+      });
       const response = await apiClient.createProperty(payload);
       if (response.success) {
         setShowModal(false);

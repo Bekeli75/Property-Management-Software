@@ -22,7 +22,9 @@ export default function PropertyImageFields({ files, setFiles, existing = {} }) 
       return;
     }
     setError('');
-    setFiles((current) => ({ ...current, [key]: file }));
+    const reader = new FileReader();
+    reader.onload = () => setFiles((current) => ({ ...current, [key]: { file, preview: reader.result, remove: false } }));
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -31,11 +33,13 @@ export default function PropertyImageFields({ files, setFiles, existing = {} }) 
       {error && <p role="alert" className="text-xs font-medium text-red-700">{error}</p>}
       <div className="grid gap-3 sm:grid-cols-3">
         {slots.map(([key, label]) => (
-          <label key={key} className="block cursor-pointer rounded-lg border border-dashed border-slate-300 p-3 hover:border-teal-500">
-            <span className="block text-xs font-semibold text-slate-700">{label}</span>
-            <span className="mt-2 block truncate text-xs text-slate-500">{files[key]?.name || (existing[key] ? 'Replace photo' : 'Choose image')}</span>
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => handleChange(key, event.target.files?.[0])} />
-          </label>
+          <div key={key} className="rounded-lg border border-dashed border-slate-300 p-3 hover:border-teal-500">
+            <label htmlFor={`property-${key}`} className="block cursor-pointer text-xs font-semibold text-slate-700">{label}</label>
+            {(!files[key]?.remove && (files[key]?.preview || existing[key])) && <div role="img" aria-label={`${label} preview`} className="mt-2 h-20 w-full rounded bg-cover bg-center" style={{ backgroundImage: `url(${files[key]?.preview || imageUrl(existing[key])})` }} />}
+            <span className="mt-2 block truncate text-xs text-slate-500">{files[key]?.file?.name || (existing[key] ? 'Replace photo' : 'Choose image')}</span>
+            <input id={`property-${key}`} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => handleChange(key, event.target.files?.[0])} />
+            {(!files[key]?.remove && (files[key]?.preview || existing[key])) && <button type="button" onClick={() => setFiles((current) => ({ ...current, [key]: { file: null, preview: null, remove: true } }))} className="mt-2 text-xs font-semibold text-red-700">Remove</button>}
+          </div>
         ))}
       </div>
     </fieldset>

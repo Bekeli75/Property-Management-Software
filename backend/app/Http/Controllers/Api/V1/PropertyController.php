@@ -56,6 +56,10 @@ class PropertyController extends ApiController
         ]);
 
         foreach (['image_1', 'image_2', 'image_3'] as $image) {
+            if ($request->boolean("remove_{$image}") && $property->{$image}) {
+                Storage::disk('public')->delete($property->{$image});
+                $validated[$image] = null;
+            }
             if ($request->hasFile($image)) {
                 $validated[$image] = $request->file($image)->store('properties', 'public');
             }
