@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Payment;
+use App\Models\Lease;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 
@@ -48,7 +49,9 @@ class PaymentController extends ApiController
      */
     public function store(Request $request)
     {
-        $request->validate([
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot record payments directly.');
+
+        $validated = $request->validate([
             'lease_id' => 'required|exists:leases,id',
             'tenant_id' => 'required|exists:tenants,id',
             'amount' => 'required|numeric|min:0',
@@ -59,15 +62,12 @@ class PaymentController extends ApiController
             'notes' => 'nullable|string',
         ]);
 
+        $lease = Lease::with('unit.property')->findOrFail($validated['lease_id']);
+        abort_unless($lease->tenant_id === (int) $validated['tenant_id'], 422, 'The payment tenant must match the lease tenant.');
+        $this->authorizePropertyManagement($request->user(), $lease->unit->property);
+
         $payment = Payment::create([
-            'lease_id' => $request->lease_id,
-            'tenant_id' => $request->tenant_id,
-            'amount' => $request->amount,
-            'payment_date' => $request->payment_date,
-            'due_date' => $request->due_date,
-            'payment_method' => $request->payment_method,
-            'description' => $request->description,
-            'notes' => $request->notes,
+            ...$validated,
             'reference_number' => 'PAY-' . strtoupper(Str::random(10)),
             'status' => 'completed',
             'is_test_payment' => true,
@@ -79,8 +79,9 @@ class PaymentController extends ApiController
     /**
      * Display the specified payment
      */
-    public function show(Payment $payment)
+    public function show(Request $request, Payment $payment)
     {
+        $this->authorizePaymentAccess($request->user(), $payment);
         $payment->load(['lease.unit.property', 'tenant.user']);
 
         return $this->successResponse($payment, 'Payment retrieved successfully');
@@ -91,7 +92,10 @@ class PaymentController extends ApiController
      */
     public function update(Request $request, Payment $payment)
     {
-        $request->validate([
+        $this->authorizePaymentAccess($request->user(), $payment);
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot update payments.');
+
+        $validated = $request->validate([
             'amount' => 'sometimes|required|numeric|min:0',
             'payment_date' => 'sometimes|required|date',
             'due_date' => 'sometimes|required|date',
@@ -101,7 +105,7 @@ class PaymentController extends ApiController
             'notes' => 'nullable|string',
         ]);
 
-        $payment->update($request->all());
+        $payment->update($validated);
 
         return $this->successResponse($payment, 'Payment updated successfully');
     }
@@ -109,8 +113,10 @@ class PaymentController extends ApiController
     /**
      * Remove the specified payment
      */
-    public function destroy(Payment $payment)
+    public function destroy(Request $request, Payment $payment)
     {
+        $this->authorizePaymentAccess($request->user(), $payment);
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot delete payments.');
         $payment->delete();
 
         return $this->successResponse([], 'Payment deleted successfully');
@@ -121,7 +127,7 @@ class PaymentController extends ApiController
      */
     public function initiateChapaPayment(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'lease_id' => 'required|exists:leases,id',
             'tenant_id' => 'required|exists:tenants,id',
             'amount' => 'required|numeric|min:0',
@@ -130,6 +136,10 @@ class PaymentController extends ApiController
             'last_name' => 'required|string',
             'phone_number' => 'required|string',
         ]);
+
+        $lease = Lease::with('unit.property')->findOrFail($validated['lease_id']);
+        abort_unless($lease->tenant_id === (int) $validated['tenant_id'], 422, 'The payment tenant must match the lease tenant.');
+        $this->authorizeLeaseAccess($request->user(), $lease);
 
         $reference = 'CHAPA-' . strtoupper(Str::random(12));
         
@@ -141,12 +151,12 @@ class PaymentController extends ApiController
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $chapaSecret,
         ])->post($chapaUrl, [
-            'amount' => $request->amount,
+            'amount' => $validated['amount'],
             'currency' => 'ETB',
-            'email' => $request->email,
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'phone_number' => $request->phone_number,
+            'email' => $validated['email'],
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'phone_number' => $validated['phone_number'],
             'tx_ref' => $reference,
             'callback_url' => env('FRONTEND_URL') . '/payment/callback',
             'return_url' => env('FRONTEND_URL') . '/payment/success',
@@ -158,9 +168,9 @@ class PaymentController extends ApiController
 
         if ($response->successful()) {
             $payment = Payment::create([
-                'lease_id' => $request->lease_id,
-                'tenant_id' => $request->tenant_id,
-                'amount' => $request->amount,
+                'lease_id' => $validated['lease_id'],
+                'tenant_id' => $validated['tenant_id'],
+                'amount' => $validated['amount'],
                 'payment_date' => now(),
                 'due_date' => now(),
                 'payment_method' => 'chapa',

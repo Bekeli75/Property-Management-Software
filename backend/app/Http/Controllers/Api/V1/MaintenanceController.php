@@ -42,7 +42,7 @@ class MaintenanceController extends ApiController
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'property_id' => 'required|exists:properties,id',
             'unit_id' => 'required|exists:units,id',
             'tenant_id' => 'required|exists:tenants,id',
@@ -52,14 +52,13 @@ class MaintenanceController extends ApiController
             'category' => 'required|in:plumbing,electrical,structural,hvac,appliances,other',
         ]);
 
+        $property = \App\Models\Property::findOrFail($validated['property_id']);
+        $unit = \App\Models\Unit::findOrFail($validated['unit_id']);
+        abort_unless($unit->property_id === $property->id, 422, 'The unit must belong to the selected property.');
+        $this->authorizePropertyAccess($request->user(), $property);
+
         $maintenance = Maintenance::create([
-            'property_id' => $request->property_id,
-            'unit_id' => $request->unit_id,
-            'tenant_id' => $request->tenant_id,
-            'title' => $request->title,
-            'description' => $request->description,
-            'priority' => $request->priority,
-            'category' => $request->category,
+            ...$validated,
             'status' => 'pending',
             'requested_date' => now(),
         ]);
@@ -70,8 +69,9 @@ class MaintenanceController extends ApiController
     /**
      * Display the specified maintenance request
      */
-    public function show(Maintenance $maintenance)
+    public function show(Request $request, Maintenance $maintenance)
     {
+        $this->authorizeMaintenanceAccess($request->user(), $maintenance);
         $maintenance->load(['property', 'unit', 'tenant.user']);
 
         return $this->successResponse($maintenance, 'Maintenance request retrieved successfully');
@@ -82,7 +82,9 @@ class MaintenanceController extends ApiController
      */
     public function update(Request $request, Maintenance $maintenance)
     {
-        $request->validate([
+        $this->authorizeMaintenanceAccess($request->user(), $maintenance);
+
+        $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|required|string',
             'priority' => 'sometimes|required|in:low,medium,high,urgent',
@@ -95,7 +97,7 @@ class MaintenanceController extends ApiController
             'assigned_to' => 'nullable|string',
         ]);
 
-        $maintenance->update($request->all());
+        $maintenance->update($validated);
 
         return $this->successResponse($maintenance, 'Maintenance request updated successfully');
     }
@@ -103,8 +105,9 @@ class MaintenanceController extends ApiController
     /**
      * Remove the specified maintenance request
      */
-    public function destroy(Maintenance $maintenance)
+    public function destroy(Request $request, Maintenance $maintenance)
     {
+        $this->authorizeMaintenanceAccess($request->user(), $maintenance);
         $maintenance->delete();
 
         return $this->successResponse([], 'Maintenance request deleted successfully');
@@ -115,6 +118,8 @@ class MaintenanceController extends ApiController
      */
     public function assign(Request $request, Maintenance $maintenance)
     {
+        $this->authorizeMaintenanceAccess($request->user(), $maintenance);
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot assign maintenance requests.');
         $request->validate([
             'assigned_to' => 'required|string',
             'scheduled_date' => 'nullable|date',
@@ -134,6 +139,8 @@ class MaintenanceController extends ApiController
      */
     public function complete(Request $request, Maintenance $maintenance)
     {
+        $this->authorizeMaintenanceAccess($request->user(), $maintenance);
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot complete maintenance requests.');
         $request->validate([
             'actual_cost' => 'nullable|numeric',
             'notes' => 'nullable|string',

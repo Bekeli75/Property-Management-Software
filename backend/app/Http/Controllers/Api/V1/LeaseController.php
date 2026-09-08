@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Lease;
+use App\Models\Tenant;
+use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
 
 class LeaseController extends ApiController
@@ -45,7 +47,9 @@ class LeaseController extends ApiController
      */
     public function store(Request $request)
     {
-        $request->validate([
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot create leases.');
+
+        $validated = $request->validate([
             'tenant_id' => 'required|exists:tenants,id',
             'unit_id' => 'required|exists:units,id',
             'start_date' => 'required|date|after:today',
@@ -58,15 +62,19 @@ class LeaseController extends ApiController
             'notes' => 'nullable|string',
         ]);
 
+        $unit = Unit::with('property')->findOrFail($validated['unit_id']);
+        Tenant::findOrFail($validated['tenant_id']);
+        $this->authorizePropertyManagement($request->user(), $unit->property);
+
         // Check for overlapping leases
-        $hasOverlap = Lease::where('unit_id', $request->unit_id)
+        $hasOverlap = Lease::where('unit_id', $validated['unit_id'])
             ->where('status', 'active')
-            ->where(function ($query) use ($request) {
-                $query->whereBetween('start_date', [$request->start_date, $request->end_date])
-                    ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
-                    ->orWhere(function ($q) use ($request) {
-                        $q->where('start_date', '<=', $request->start_date)
-                            ->where('end_date', '>=', $request->end_date);
+            ->where(function ($query) use ($validated) {
+                $query->whereBetween('start_date', [$validated['start_date'], $validated['end_date']])
+                    ->orWhereBetween('end_date', [$validated['start_date'], $validated['end_date']])
+                    ->orWhere(function ($q) use ($validated) {
+                        $q->where('start_date', '<=', $validated['start_date'])
+                            ->where('end_date', '>=', $validated['end_date']);
                     });
             })
             ->exists();
@@ -76,16 +84,7 @@ class LeaseController extends ApiController
         }
 
         $lease = Lease::create([
-            'tenant_id' => $request->tenant_id,
-            'unit_id' => $request->unit_id,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-            'monthly_rent' => $request->monthly_rent,
-            'security_deposit' => $request->security_deposit,
-            'payment_frequency' => $request->payment_frequency,
-            'payment_day' => $request->payment_day,
-            'terms' => $request->terms,
-            'notes' => $request->notes,
+            ...$validated,
             'status' => 'active',
         ]);
 
@@ -98,8 +97,9 @@ class LeaseController extends ApiController
     /**
      * Display the specified lease
      */
-    public function show(Lease $lease)
+    public function show(Request $request, Lease $lease)
     {
+        $this->authorizeLeaseAccess($request->user(), $lease);
         $lease->load(['tenant.user', 'unit.property', 'payments']);
 
         return $this->successResponse($lease, 'Lease retrieved successfully');
@@ -110,7 +110,10 @@ class LeaseController extends ApiController
      */
     public function update(Request $request, Lease $lease)
     {
-        $request->validate([
+        $this->authorizeLeaseAccess($request->user(), $lease);
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot update leases.');
+
+        $validated = $request->validate([
             'start_date' => 'sometimes|required|date',
             'end_date' => 'sometimes|required|date|after:start_date',
             'monthly_rent' => 'sometimes|required|numeric|min:0',
@@ -122,7 +125,7 @@ class LeaseController extends ApiController
             'notes' => 'nullable|string',
         ]);
 
-        $lease->update($request->all());
+        $lease->update($validated);
 
         return $this->successResponse($lease, 'Lease updated successfully');
     }
@@ -130,8 +133,10 @@ class LeaseController extends ApiController
     /**
      * Remove the specified lease
      */
-    public function destroy(Lease $lease)
+    public function destroy(Request $request, Lease $lease)
     {
+        $this->authorizeLeaseAccess($request->user(), $lease);
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot delete leases.');
         $lease->delete();
 
         return $this->successResponse([], 'Lease deleted successfully');
@@ -142,6 +147,7 @@ class LeaseController extends ApiController
      */
     public function terminate(Request $request, Lease $lease)
     {
+        $this->authorizeLeaseAccess($request->user(), $lease);
         $request->validate([
             'termination_reason' => 'required|string',
             'termination_effective_date' => 'required|date|after:today',

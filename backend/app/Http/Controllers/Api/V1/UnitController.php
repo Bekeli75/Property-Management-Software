@@ -41,7 +41,7 @@ class UnitController extends ApiController
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'property_id' => 'required|exists:properties,id',
             'unit_number' => 'required|string|max:50',
             'floor' => 'nullable|string|max:50',
@@ -54,7 +54,9 @@ class UnitController extends ApiController
             'description' => 'nullable|string',
         ]);
 
-        $unit = Unit::create($request->all());
+        $property = Property::findOrFail($validated['property_id']);
+        $this->authorizePropertyManagement($request->user(), $property);
+        $unit = Unit::create($validated);
 
         return $this->successResponse($unit, 'Unit created successfully', 201);
     }
@@ -62,8 +64,9 @@ class UnitController extends ApiController
     /**
      * Display the specified unit
      */
-    public function show(Unit $unit)
+    public function show(Request $request, Unit $unit)
     {
+        $this->authorizeUnitAccess($request->user(), $unit);
         $unit->load(['property', 'leases.tenant', 'activeLease.tenant']);
         
         return $this->successResponse($unit, 'Unit retrieved successfully');
@@ -74,7 +77,9 @@ class UnitController extends ApiController
      */
     public function update(Request $request, Unit $unit)
     {
-        $request->validate([
+        $this->authorizeUnitAccess($request->user(), $unit);
+
+        $validated = $request->validate([
             'unit_number' => 'sometimes|required|string|max:50',
             'floor' => 'nullable|string|max:50',
             'type' => 'sometimes|required|in:apartment,house,commercial,office,studio,other',
@@ -87,7 +92,7 @@ class UnitController extends ApiController
             'description' => 'nullable|string',
         ]);
 
-        $unit->update($request->all());
+        $unit->update($validated);
 
         return $this->successResponse($unit, 'Unit updated successfully');
     }
@@ -95,8 +100,9 @@ class UnitController extends ApiController
     /**
      * Remove the specified unit
      */
-    public function destroy(Unit $unit)
+    public function destroy(Request $request, Unit $unit)
     {
+        $this->authorizeUnitAccess($request->user(), $unit);
         $unit->delete();
 
         return $this->successResponse([], 'Unit deleted successfully');
@@ -105,8 +111,9 @@ class UnitController extends ApiController
     /**
      * Get units by property
      */
-    public function byProperty(Property $property)
+    public function byProperty(Request $request, Property $property)
     {
+        $this->authorizePropertyAccess($request->user(), $property);
         $units = $property->units()->with('activeLease')->get();
         
         return $this->successResponse($units, 'Units retrieved successfully');

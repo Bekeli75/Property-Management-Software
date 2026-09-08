@@ -42,7 +42,9 @@ class TenantController extends ApiController
      */
     public function store(Request $request)
     {
-        $request->validate([
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot create tenant records.');
+
+        $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'id_number' => 'required|string|unique:tenants',
             'id_type' => 'required|string|max:50',
@@ -55,7 +57,7 @@ class TenantController extends ApiController
             'notes' => 'nullable|string',
         ]);
 
-        $tenant = Tenant::create($request->all());
+        $tenant = Tenant::create($validated);
 
         return $this->successResponse($tenant, 'Tenant created successfully', 201);
     }
@@ -63,8 +65,9 @@ class TenantController extends ApiController
     /**
      * Display the specified tenant
      */
-    public function show(Tenant $tenant)
+    public function show(Request $request, Tenant $tenant)
     {
+        $this->authorizeTenantAccess($request->user(), $tenant);
         $tenant->load(['user', 'leases.unit.property', 'payments', 'maintenanceRequests']);
         
         return $this->successResponse($tenant, 'Tenant retrieved successfully');
@@ -75,7 +78,9 @@ class TenantController extends ApiController
      */
     public function update(Request $request, Tenant $tenant)
     {
-        $request->validate([
+        $this->authorizeTenantAccess($request->user(), $tenant);
+
+        $validated = $request->validate([
             'id_number' => 'sometimes|required|string|unique:tenants,id_number,' . $tenant->id,
             'id_type' => 'sometimes|required|string|max:50',
             'date_of_birth' => 'nullable|date',
@@ -88,7 +93,7 @@ class TenantController extends ApiController
             'notes' => 'nullable|string',
         ]);
 
-        $tenant->update($request->all());
+        $tenant->update($validated);
 
         return $this->successResponse($tenant, 'Tenant updated successfully');
     }
@@ -96,8 +101,9 @@ class TenantController extends ApiController
     /**
      * Remove the specified tenant
      */
-    public function destroy(Tenant $tenant)
+    public function destroy(Request $request, Tenant $tenant)
     {
+        $this->authorizeTenantAccess($request->user(), $tenant);
         $tenant->delete();
 
         return $this->successResponse([], 'Tenant deleted successfully');
