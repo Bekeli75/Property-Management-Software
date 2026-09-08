@@ -10,15 +10,21 @@ const labels = { total_properties: 'Properties', assigned_properties: 'Assigned 
 const money = new Set(['total_rent_collected', 'total_expenses', 'net_income', 'total_payments']);
 
 export default function ReportsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
   const [data, setData] = useState(null);
   useEffect(() => {
+    if (authLoading) return undefined;
+    if (!isAuthenticated) {
+      router.replace('/login');
+      return undefined;
+    }
+
     let active = true;
     apiClient.getDashboard().then((response) => { if (active && response.success) setData(response.data); }).catch((error) => console.error(error));
     return () => { active = false; };
-  }, []);
-  if (!user) return null;
+  }, [authLoading, isAuthenticated, router]);
+  if (authLoading || !user) return null;
   const stats = Object.entries(data?.statistics || {});
   return <div className="min-h-screen bg-[#f6f8fb] text-slate-900"><Header router={router} logout={logout} /><main className="mx-auto max-w-6xl px-5 py-8 sm:px-8"><p className="text-sm font-semibold text-teal-700">{user.role === 'administrator' ? 'Platform reporting' : 'Performance reporting'}</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">Reports</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">A clear snapshot of the data available to your {user.role} workspace.</p><section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{stats.map(([key, value]) => <div key={key} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">{labels[key] || key.replace(/_/g, ' ')}</p><p className="mt-4 text-2xl font-semibold text-slate-950">{money.has(key) ? `ETB ${Number(value || 0).toLocaleString()}` : typeof value === 'boolean' ? (value ? 'Yes' : 'No') : Number(value || 0).toLocaleString()}</p></div>)}</section><section className="mt-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="font-semibold text-slate-950">Report scope</h2><p className="mt-2 text-sm leading-6 text-slate-500">{user.role === 'administrator' ? 'This report covers the complete platform.' : user.role === 'owner' ? 'This report covers properties you own.' : user.role === 'manager' ? 'This report covers properties assigned to you.' : 'This report covers your lease and account activity.'}</p></section></main></div>;
 }

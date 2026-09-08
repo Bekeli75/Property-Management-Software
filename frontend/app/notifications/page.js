@@ -12,19 +12,25 @@ const notifications = [
 ];
 
 export default function NotificationsPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
+    if (authLoading) return undefined;
+    if (!isAuthenticated) {
+      router.replace('/login');
+      return undefined;
+    }
+
     let active = true;
     apiClient.getNotifications().then((response) => {
       if (active && response.success) setNotifications(response.data);
     }).catch((error) => console.error(error));
     return () => { active = false; };
-  }, []);
+  }, [authLoading, isAuthenticated, router]);
 
-  if (!user) return null;
+  if (authLoading || !user) return null;
 
   const markRead = async (id) => {
     await apiClient.markNotificationRead(id);

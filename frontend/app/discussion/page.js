@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import apiClient from '@/lib/api';
 import Logo from '@/components/Logo';
 
 export default function DiscussionPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
@@ -14,6 +15,12 @@ export default function DiscussionPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading) return undefined;
+    if (!isAuthenticated) {
+      router.replace('/login');
+      return undefined;
+    }
+
     let active = true;
     apiClient.getDiscussions().then((response) => {
       if (active && response.success) setMessages(response.data);
@@ -21,9 +28,9 @@ export default function DiscussionPage() {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, []);
+  }, [authLoading, isAuthenticated, router]);
 
-  if (!user) return null;
+  if (authLoading || !user) return null;
 
   const submitMessage = async (event) => {
     event.preventDefault();
