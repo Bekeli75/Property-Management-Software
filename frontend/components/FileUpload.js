@@ -147,7 +147,7 @@ export default function FileUpload({
             return (
               <li key={`${file.name}-${file.lastModified}-${index}`} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-2.5">
                 {isImage && preview ? (
-                  <img src={preview} alt="preview" className="h-10 w-10 shrink-0 rounded-md object-cover" />
+                  <img src={preview} alt={`${file.name} preview`} className="h-10 w-10 shrink-0 rounded-md object-cover" />
                 ) : (
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500">
                     {file.name.split('.').pop()?.toLowerCase() === 'pdf' ? <FileText size={18} /> : <FileImage size={18} />}

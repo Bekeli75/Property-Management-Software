@@ -25,6 +25,8 @@ class PropertyController extends ApiController
             $query->whereHas('managers', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             });
+        } elseif ($user->isTenant()) {
+            abort(403, 'Tenants cannot access the property directory.');
         }
         // Administrators see all properties
         
