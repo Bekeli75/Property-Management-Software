@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import apiClient from '@/lib/api';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PropertyImageFields from '@/components/PropertyImageFields';
+import AppShell from '@/components/AppShell';
 
 export default function PropertyDetailPage() {
   const { user, isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
@@ -95,26 +96,7 @@ export default function PropertyDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{property.name}</h1>
-              <p className="text-sm text-gray-600">Property Details</p>
-            </div>
-            <button
-              onClick={() => router.push('/properties')}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
-            >
-              Back to Properties
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
+    <AppShell>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Property Information */}
@@ -402,6 +384,6 @@ export default function PropertyDetailPage() {
         onConfirm={handleDelete}
         loading={deleting}
       />
-    </div>
+    </AppShell>
   );
 }
