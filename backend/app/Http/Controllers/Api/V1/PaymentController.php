@@ -196,12 +196,20 @@ class PaymentController extends ApiController
      */
     public function chapaCallback(Request $request)
     {
-        $reference = $request->input('tx_ref');
+        $validated = $request->validate([
+            'tx_ref' => 'required|string|max:100',
+        ]);
+
+        $reference = $validated['tx_ref'];
         
         $payment = Payment::where('reference_number', $reference)->first();
         
         if (!$payment) {
             return $this->errorResponse('Payment not found', [], 404);
+        }
+
+        if ($payment->status === 'completed') {
+            return $this->successResponse($payment, 'Payment was already verified');
         }
 
         $chapaSecret = env('CHAPA_SECRET_KEY');
@@ -229,6 +237,6 @@ class PaymentController extends ApiController
             'chapa_response' => $response->json(),
         ]);
 
-        return $this->errorResponse('Payment verification failed', $response->json(), 400);
+        return $this->errorResponse('Payment verification failed', [], 400);
     }
 }

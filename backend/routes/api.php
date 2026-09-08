@@ -23,8 +23,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // API V1 Routes
 Route::prefix('v1')->group(function () {
     // Public routes
-    Route::post('/auth/login', [AuthController::class, 'login']);
-    Route::post('/auth/register', [AuthController::class, 'register']);
+    Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
+    Route::post('payments/chapa/callback', [PaymentController::class, 'chapaCallback'])->middleware('throttle:30,1');
     
     // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -56,7 +57,6 @@ Route::prefix('v1')->group(function () {
         // Payments
         Route::apiResource('payments', PaymentController::class);
         Route::post('payments/chapa/initiate', [PaymentController::class, 'initiateChapaPayment']);
-        Route::post('payments/chapa/callback', [PaymentController::class, 'chapaCallback']);
         
         // Maintenance
         Route::apiResource('maintenance', MaintenanceController::class);
