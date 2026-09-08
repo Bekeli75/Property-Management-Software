@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
 import Logo from '@/components/Logo';
 import GlobalSearch from '@/components/GlobalSearch';
+import NotificationPopover from '@/components/NotificationPopover';
 
 const roleLabels = {
   administrator: 'Administrator',
@@ -271,6 +272,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex w-full max-w-xl items-center justify-end gap-3 lg:w-auto">
               <GlobalSearch />
+              <NotificationPopover />
               <button onClick={handleLogout} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-900 lg:hidden">Sign out</button>
             </div>
           </div>

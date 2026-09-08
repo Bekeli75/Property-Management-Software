@@ -57,6 +57,15 @@ class TenantPortalController extends ApiController
         return $this->successResponse($notification, 'Notification marked as read');
     }
 
+    public function markAllNotificationsRead(Request $request)
+    {
+        UserNotification::where('user_id', $request->user()->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return $this->successResponse([], 'Notifications marked as read');
+    }
+
     private function tenantFor(Request $request)
     {
         abort_unless($request->user()->isTenant(), 403);

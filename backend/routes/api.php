@@ -75,6 +75,7 @@ Route::prefix('v1')->group(function () {
         Route::get('tenant-portal/discussions', [TenantPortalController::class, 'discussions']);
         Route::post('tenant-portal/discussions', [TenantPortalController::class, 'createDiscussion']);
         Route::get('tenant-portal/notifications', [TenantPortalController::class, 'notifications']);
+        Route::patch('tenant-portal/notifications/read-all', [TenantPortalController::class, 'markAllNotificationsRead']);
         Route::patch('tenant-portal/notifications/{notification}/read', [TenantPortalController::class, 'markNotificationRead']);
     });
 });

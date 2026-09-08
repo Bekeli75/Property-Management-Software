@@ -167,6 +167,10 @@ class ApiClient {
     return this.patch(`/tenant-portal/notifications/${id}/read`, {});
   }
 
+  async markAllNotificationsRead() {
+    return this.patch('/tenant-portal/notifications/read-all', {});
+  }
+
   // Users
   async getUsers(role = null) {
     const endpoint = role ? `/users?role=${role}` : '/users';
