@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use App\Models\User;
+use App\Models\UserNotification;
 
 class AuthController extends ApiController
 {
@@ -46,7 +47,6 @@ class AuthController extends ApiController
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:owner,manager,tenant,administrator',
             'phone' => 'nullable|string|max:20',
         ]);
 
@@ -54,8 +54,14 @@ class AuthController extends ApiController
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role,
+            'role' => 'tenant',
             'phone' => $request->phone,
+        ]);
+
+        UserNotification::create([
+            'user_id' => $user->id,
+            'title' => 'Welcome to Propentra',
+            'message' => 'Your tenant workspace is ready to use.',
         ]);
 
         $token = $user->createToken('api-token')->plainTextToken;
@@ -82,6 +88,18 @@ class AuthController extends ApiController
     public function me(Request $request)
     {
         return $this->successResponse($request->user(), 'User retrieved successfully');
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        $request->user()->update($validated);
+
+        return $this->successResponse($request->user(), 'Profile updated successfully');
     }
 
     /**

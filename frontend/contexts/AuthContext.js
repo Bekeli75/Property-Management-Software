@@ -11,25 +11,27 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const token = apiClient.getToken();
-      if (token) {
-        const response = await apiClient.getMe();
-        if (response.success) {
-          setUser(response.data);
+    let active = true;
+    const initializeAuth = async () => {
+      try {
+        const token = apiClient.getToken();
+        if (token) {
+          const response = await apiClient.getMe();
+          if (active && response.success) {
+            setUser(response.data);
+          }
         }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        apiClient.setToken(null);
+      } finally {
+        if (active) setLoading(false);
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      apiClient.setToken(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    initializeAuth();
+    return () => { active = false; };
+  }, []);
 
   const login = async (email, password) => {
     try {
@@ -61,16 +63,17 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = async () => {
-    try {
-      await apiClient.logout();
-      setUser(null);
-      apiClient.setToken(null);
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Force logout even if API call fails
-      setUser(null);
-      apiClient.setToken(null);
+  const logout = () => {
+    apiClient.logout().catch((logoutError) => {
+      console.error('Logout request failed:', logoutError);
+    });
+
+    // Clear local access immediately even if the API is unavailable.
+    setUser(null);
+    apiClient.setToken(null);
+
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      window.location.replace('/login');
     }
   };
 

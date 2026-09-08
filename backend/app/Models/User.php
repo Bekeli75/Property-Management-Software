@@ -11,6 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[Fillable(['name', 'email', 'password', 'role', 'phone'])]
 #[Hidden(['password', 'remember_token'])]
@@ -67,5 +68,11 @@ class User extends Authenticatable
     public function tenant(): HasOne
     {
         return $this->hasOne(\App\Models\Tenant::class);
+    }
+
+    public function managedProperties(): BelongsToMany
+    {
+        return $this->belongsToMany(Property::class, 'property_manager', 'manager_id', 'property_id')
+            ->withTimestamps();
     }
 }

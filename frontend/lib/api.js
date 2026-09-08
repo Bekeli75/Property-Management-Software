@@ -56,14 +56,39 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'An error occurred');
+        throw new Error(this.getFriendlyError(response.status, endpoint));
       }
 
       return data;
     } catch (error) {
       console.error('API Error:', error);
+      if (error instanceof TypeError) {
+        throw new Error('Unable to connect to the service. Please try again.');
+      }
       throw error;
     }
+  }
+
+  getFriendlyError(status, endpoint) {
+    if (status === 401 && endpoint.includes('/auth/login')) {
+      return 'The email or password is incorrect.';
+    }
+
+    if (status === 422) {
+      return endpoint.includes('/auth/register')
+        ? 'Please check your registration details and try again.'
+        : 'Please check the information you entered and try again.';
+    }
+
+    if (status === 419) {
+      return 'Your session expired. Please refresh the page and try again.';
+    }
+
+    if (status >= 500) {
+      return 'The service is temporarily unavailable. Please try again later.';
+    }
+
+    return 'Something went wrong. Please try again.';
   }
 
   async get(endpoint) {
@@ -120,6 +145,40 @@ class ApiClient {
 
   async getMe() {
     return this.get('/auth/me');
+  }
+
+  async updateProfile(data) {
+    return this.patch('/auth/profile', data);
+  }
+
+  async getDiscussions() {
+    return this.get('/tenant-portal/discussions');
+  }
+
+  async createDiscussion(message) {
+    return this.post('/tenant-portal/discussions', { message });
+  }
+
+  async getNotifications() {
+    return this.get('/tenant-portal/notifications');
+  }
+
+  async markNotificationRead(id) {
+    return this.patch(`/tenant-portal/notifications/${id}/read`, {});
+  }
+
+  // Users
+  async getUsers(role = null) {
+    const endpoint = role ? `/users?role=${role}` : '/users';
+    return this.get(endpoint);
+  }
+
+  async createUser(data) {
+    return this.post('/users', data);
+  }
+
+  async updateUserRole(id, role) {
+    return this.patch(`/users/${id}`, { role });
   }
 
   // Properties

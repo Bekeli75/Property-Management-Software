@@ -2,26 +2,28 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import apiClient from '@/lib/api';
-import Logo from '@/components/Logo';
 
-export default function PropertiesPage() {
+export default function PropertyUnitsPage() {
   const { user, isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
   const router = useRouter();
-  const [properties, setProperties] = useState([]);
+  const params = useParams();
+  const [units, setUnits] = useState([]);
+  const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    address: '',
-    city: '',
-    state: '',
-    postal_code: '',
+    property_id: params.id,
+    unit_number: '',
+    floor: '',
+    type: 'apartment',
+    bedrooms: 1,
+    bathrooms: 1,
+    area: '',
+    base_rent: '',
+    amenities: '',
     description: '',
-    total_area: '',
-    year_built: '',
-    property_type: '',
   });
 
   useEffect(() => {
@@ -30,22 +32,24 @@ export default function PropertiesPage() {
       return;
     }
 
-    if (!isOwner && !isManager && !isAdmin) {
-      router.push('/dashboard');
-      return;
-    }
+    fetchUnits();
+  }, [isAuthenticated, params.id, router]);
 
-    fetchProperties();
-  }, [isAuthenticated, isOwner, isManager, isAdmin, router]);
-
-  const fetchProperties = async () => {
+  const fetchUnits = async () => {
     try {
-      const response = await apiClient.getProperties();
-      if (response.success) {
-        setProperties(response.data);
+      const [unitsResponse, propertyResponse] = await Promise.all([
+        apiClient.getUnitsByProperty(params.id),
+        apiClient.getProperty(params.id),
+      ]);
+      
+      if (unitsResponse.success) {
+        setUnits(unitsResponse.data);
+      }
+      if (propertyResponse.success) {
+        setProperty(propertyResponse.data);
       }
     } catch (error) {
-      console.error('Failed to fetch properties:', error);
+      console.error('Failed to fetch units:', error);
     } finally {
       setLoading(false);
     }
@@ -54,35 +58,36 @@ export default function PropertiesPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await apiClient.createProperty(formData);
+      const response = await apiClient.createUnit(formData);
       if (response.success) {
         setShowModal(false);
         setFormData({
-          name: '',
-          address: '',
-          city: '',
-          state: '',
-          postal_code: '',
+          property_id: params.id,
+          unit_number: '',
+          floor: '',
+          type: 'apartment',
+          bedrooms: 1,
+          bathrooms: 1,
+          area: '',
+          base_rent: '',
+          amenities: '',
           description: '',
-          total_area: '',
-          year_built: '',
-          property_type: '',
         });
-        fetchProperties();
+        fetchUnits();
       }
     } catch (error) {
-      console.error('Failed to create property:', error);
+      console.error('Failed to create unit:', error);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this property?')) return;
+    if (!confirm('Are you sure you want to delete this unit?')) return;
 
     try {
-      await apiClient.deleteProperty(id);
-      fetchProperties();
+      await apiClient.deleteUnit(id);
+      fetchUnits();
     } catch (error) {
-      console.error('Failed to delete property:', error);
+      console.error('Failed to delete unit:', error);
     }
   };
 
@@ -100,18 +105,17 @@ export default function PropertiesPage() {
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <Logo size="sm" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Properties</h1>
-                <p className="text-sm text-gray-600">Manage your properties</p>
-              </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {property?.name || 'Property'} - Units
+              </h1>
+              <p className="text-sm text-gray-600">Manage property units</p>
             </div>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push(`/properties/${params.id}`)}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
             >
-              Back to Dashboard
+              Back to Property
             </button>
           </div>
         </div>
@@ -121,69 +125,78 @@ export default function PropertiesPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
-            All Properties ({properties.length})
+            All Units ({units.length})
           </h2>
           {(isOwner || isAdmin) && (
             <button
               onClick={() => setShowModal(true)}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
             >
-              Add Property
+              Add Unit
             </button>
           )}
         </div>
 
-        {properties.length === 0 ? (
+        {units.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-600">No properties found</p>
+            <p className="text-gray-600">No units found</p>
             {(isOwner || isAdmin) && (
               <button
                 onClick={() => setShowModal(true)}
                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
               >
-                Add Your First Property
+                Add Your First Unit
               </button>
             )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((property) => (
-              <div key={property.id} className="bg-white rounded-lg shadow hover:shadow-lg transition">
+            {units.map((unit) => (
+              <div key={unit.id} className="bg-white rounded-lg shadow hover:shadow-lg transition">
                 <div className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {property.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    {property.address}, {property.city}, {property.state}
-                  </p>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Unit {unit.unit_number}
+                    </h3>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      unit.status === 'available' ? 'bg-green-100 text-green-800' :
+                      unit.status === 'occupied' ? 'bg-blue-100 text-blue-800' :
+                      unit.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {unit.status}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-4 capitalize">{unit.type}</p>
                   <div className="space-y-2 text-sm">
                     <p className="text-gray-600">
-                      <span className="font-medium">Units:</span> {property.units?.length || 0}
+                      <span className="font-medium">Floor:</span> {unit.floor || 'N/A'}
                     </p>
                     <p className="text-gray-600">
-                      <span className="font-medium">Status:</span>{' '}
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        property.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {property.status}
-                      </span>
+                      <span className="font-medium">Bedrooms:</span> {unit.bedrooms}
                     </p>
-                    {property.total_area && (
+                    <p className="text-gray-600">
+                      <span className="font-medium">Bathrooms:</span> {unit.bathrooms}
+                    </p>
+                    {unit.area && (
                       <p className="text-gray-600">
-                        <span className="font-medium">Area:</span> {property.total_area} sq ft
+                        <span className="font-medium">Area:</span> {unit.area} sq ft
                       </p>
                     )}
+                    <p className="text-gray-600">
+                      <span className="font-medium">Base Rent:</span> ETB {unit.base_rent?.toLocaleString()}
+                    </p>
                   </div>
                   <div className="mt-4 flex gap-2">
                     <button
-                      onClick={() => router.push(`/properties/${property.id}`)}
+                      onClick={() => router.push(`/units/${unit.id}`)}
                       className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition text-sm"
                     >
                       View Details
                     </button>
                     {(isOwner || isAdmin) && (
                       <button
-                        onClick={() => handleDelete(property.id)}
+                        onClick={() => handleDelete(unit.id)}
                         className="px-3 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition text-sm"
                       >
                         Delete
@@ -197,73 +210,119 @@ export default function PropertiesPage() {
         )}
       </main>
 
-      {/* Add Property Modal */}
+      {/* Add Unit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Property</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Unit</h3>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Property Name *
+                    Unit Number *
                   </label>
                   <input
                     type="text"
                     required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    value={formData.unit_number}
+                    onChange={(e) => setFormData({ ...formData, unit_number: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., 101, A1, etc."
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Address *
+                    Floor
                   </label>
                   <input
                     type="text"
-                    required
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    value={formData.floor}
+                    onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., 1st, Ground, etc."
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Unit Type *
+                  </label>
+                  <select
+                    required
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="apartment">Apartment</option>
+                    <option value="house">House</option>
+                    <option value="commercial">Commercial</option>
+                    <option value="office">Office</option>
+                    <option value="studio">Studio</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      City *
+                      Bedrooms *
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       required
-                      value={formData.city}
-                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      min="0"
+                      value={formData.bedrooms}
+                      onChange={(e) => setFormData({ ...formData, bedrooms: parseInt(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      State *
+                      Bathrooms *
                     </label>
                     <input
-                      type="text"
+                      type="number"
                       required
-                      value={formData.state}
-                      onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                      min="0"
+                      value={formData.bathrooms}
+                      onChange={(e) => setFormData({ ...formData, bathrooms: parseInt(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Postal Code *
+                    Area (sq ft)
                   </label>
                   <input
-                    type="text"
-                    required
-                    value={formData.postal_code}
-                    onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                    type="number"
+                    value={formData.area}
+                    onChange={(e) => setFormData({ ...formData, area: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Base Rent (ETB) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    step="0.01"
+                    value={formData.base_rent}
+                    onChange={(e) => setFormData({ ...formData, base_rent: parseFloat(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Amenities
+                  </label>
+                  <textarea
+                    value={formData.amenities}
+                    onChange={(e) => setFormData({ ...formData, amenities: e.target.value })}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., Parking, Balcony, etc."
                   />
                 </div>
                 <div>
@@ -273,43 +332,7 @@ export default function PropertiesPage() {
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Total Area (sq ft)
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.total_area}
-                      onChange={(e) => setFormData({ ...formData, total_area: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Year Built
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.year_built}
-                      onChange={(e) => setFormData({ ...formData, year_built: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Property Type
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.property_type}
-                    onChange={(e) => setFormData({ ...formData, property_type: e.target.value })}
-                    placeholder="e.g., Apartment Complex, Commercial Building"
+                    rows={2}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -325,7 +348,7 @@ export default function PropertiesPage() {
                     type="submit"
                     className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
                   >
-                    Add Property
+                    Add Unit
                   </button>
                 </div>
               </form>

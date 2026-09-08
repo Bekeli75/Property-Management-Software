@@ -12,17 +12,9 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\MaintenanceController;
 use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\TenantPortalController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -39,7 +31,13 @@ Route::prefix('v1')->group(function () {
         // Authentication
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
+        Route::patch('/auth/profile', [AuthController::class, 'updateProfile']);
         Route::post('/auth/refresh', [AuthController::class, 'refresh']);
+        
+        // Users
+        Route::get('/users', [UserController::class, 'index']);
+        Route::post('/users', [UserController::class, 'store']);
+        Route::patch('/users/{user}', [UserController::class, 'update']);
         
         // Properties
         Route::apiResource('properties', PropertyController::class);
@@ -70,5 +68,11 @@ Route::prefix('v1')->group(function () {
         
         // Dashboard
         Route::get('dashboard', [DashboardController::class, 'index']);
+
+        // Tenant portal
+        Route::get('tenant-portal/discussions', [TenantPortalController::class, 'discussions']);
+        Route::post('tenant-portal/discussions', [TenantPortalController::class, 'createDiscussion']);
+        Route::get('tenant-portal/notifications', [TenantPortalController::class, 'notifications']);
+        Route::patch('tenant-portal/notifications/{notification}/read', [TenantPortalController::class, 'markNotificationRead']);
     });
 });
