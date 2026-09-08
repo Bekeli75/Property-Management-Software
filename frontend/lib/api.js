@@ -393,6 +393,12 @@ class ApiClient {
     return this.get('/dashboard');
   }
 
+  async getReports(filters = {}) {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => { if (value) params.set(key, value); });
+    return this.get(`/reports${params.toString() ? `?${params.toString()}` : ''}`);
+  }
+
   async search(query) {
     return this.get(`/search?q=${encodeURIComponent(query)}`);
   }
