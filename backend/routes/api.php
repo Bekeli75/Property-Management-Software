@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\TenantPortalController;
+use App\Http\Controllers\Api\V1\SearchController;
 
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
@@ -68,6 +69,7 @@ Route::prefix('v1')->group(function () {
         
         // Dashboard
         Route::get('dashboard', [DashboardController::class, 'index']);
+        Route::get('search', SearchController::class)->middleware('throttle:60,1');
 
         // Tenant portal
         Route::get('tenant-portal/discussions', [TenantPortalController::class, 'discussions']);

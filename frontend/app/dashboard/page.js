@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
 import Logo from '@/components/Logo';
+import GlobalSearch from '@/components/GlobalSearch';
 
 const roleLabels = {
   administrator: 'Administrator',
@@ -268,7 +269,10 @@ export default function DashboardPage() {
               <p className="text-sm font-medium text-teal-700">{dashboard.eyebrow}</p>
               <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Good to see you, {user.name.split(' ')[0]}.</h1>
             </div>
-            <button onClick={handleLogout} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-900 lg:hidden">Sign out</button>
+            <div className="flex w-full max-w-xl items-center justify-end gap-3 lg:w-auto">
+              <GlobalSearch />
+              <button onClick={handleLogout} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-900 lg:hidden">Sign out</button>
+            </div>
           </div>
           <nav className="flex gap-5 overflow-x-auto border-t border-slate-100 px-5 py-3 lg:hidden sm:px-8">
             {navigation.map((item) => (

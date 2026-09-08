@@ -356,6 +356,10 @@ class ApiClient {
   async getDashboard() {
     return this.get('/dashboard');
   }
+
+  async search(query) {
+    return this.get(`/search?q=${encodeURIComponent(query)}`);
+  }
 }
 
 const apiClient = new ApiClient();
