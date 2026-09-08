@@ -290,7 +290,7 @@ export default function DashboardPage() {
         </header>
 
         <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
-          <section className="mb-8 flex flex-col justify-between gap-5 rounded-2xl bg-slate-900 px-6 py-7 text-white shadow-sm sm:flex-row sm:items-end sm:px-8">
+          <section className="dashboard-hero mb-8 flex flex-col justify-between gap-5 rounded-2xl px-6 py-7 text-white shadow-sm sm:flex-row sm:items-end sm:px-8">
             <div>
               <p className="text-sm font-medium text-teal-300">{dashboard.eyebrow}</p>
               <h2 className="mt-2 max-w-xl text-2xl font-semibold tracking-tight">{dashboard.title}</h2>
