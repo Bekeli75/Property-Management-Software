@@ -168,6 +168,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [dashboardData, setDashboardData] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState('');
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -183,13 +184,18 @@ export default function DashboardPage() {
     let active = true;
 
     const loadDashboard = async () => {
+      setDataLoading(true);
+      setDashboardError('');
       try {
         const response = await apiClient.getDashboard();
         if (active && response.success) {
           setDashboardData(response.data);
+        } else if (active) {
+          setDashboardError(response.message || 'Dashboard data is unavailable right now.');
         }
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
+        if (active) setDashboardError('Dashboard data is unavailable right now.');
       } finally {
         if (active) {
           setDataLoading(false);
@@ -292,6 +298,13 @@ export default function DashboardPage() {
             </div>
             <button onClick={() => router.push(dashboard.primaryAction.path)} className="w-fit rounded-lg bg-teal-400 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-teal-300">{dashboard.primaryAction.label}</button>
           </section>
+
+          {dashboardError && (
+            <section className="mb-8 rounded-xl border border-red-200 bg-red-50 p-5" role="alert">
+              <p className="text-sm font-semibold text-red-800">{dashboardError}</p>
+              <button onClick={() => window.location.reload()} className="mt-3 rounded-lg bg-red-700 px-3 py-2 text-xs font-semibold text-white hover:bg-red-800">Try again</button>
+            </section>
+          )}
 
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {statistics.map(([key, value], index) => (
