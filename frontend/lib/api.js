@@ -56,6 +56,12 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401 && !endpoint.includes('/auth/login')) {
+          this.setToken(null);
+          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+            window.location.replace('/login');
+          }
+        }
         throw new Error(this.getFriendlyError(response.status, endpoint));
       }
 
