@@ -38,7 +38,7 @@ export default function LeasesPage() {
     fetchUnits();
   }, [isAuthenticated, router]);
 
-  const fetchLeases = async () => {
+  async function fetchLeases() {
     try {
       const response = await apiClient.getLeases();
       if (response.success) {
@@ -49,9 +49,9 @@ export default function LeasesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const fetchTenants = async () => {
+  async function fetchTenants() {
     try {
       const response = await apiClient.getTenants();
       if (response.success) {
@@ -60,9 +60,9 @@ export default function LeasesPage() {
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
     }
-  };
+  }
 
-  const fetchUnits = async () => {
+  async function fetchUnits() {
     try {
       const response = await apiClient.getUnits();
       if (response.success) {
@@ -71,7 +71,7 @@ export default function LeasesPage() {
     } catch (error) {
       console.error('Failed to fetch units:', error);
     }
-  };
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

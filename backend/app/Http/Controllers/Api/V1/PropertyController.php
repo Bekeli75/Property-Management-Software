@@ -37,7 +37,9 @@ class PropertyController extends ApiController
      */
     public function store(Request $request)
     {
-        $request->validate([
+        abort_unless($request->user()->isAdmin() || $request->user()->isOwner(), 403, 'Only administrators and owners can create properties.');
+
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
             'address' => 'required|string|max:255',
             'city' => 'required|string|max:100',
@@ -51,15 +53,7 @@ class PropertyController extends ApiController
 
         $property = Property::create([
             'owner_id' => $request->user()->id,
-            'name' => $request->name,
-            'address' => $request->address,
-            'city' => $request->city,
-            'state' => $request->state,
-            'postal_code' => $request->postal_code,
-            'description' => $request->description,
-            'total_area' => $request->total_area,
-            'year_built' => $request->year_built,
-            'property_type' => $request->property_type,
+            ...$validated,
         ]);
 
         return $this->successResponse($property, 'Property created successfully', 201);
@@ -68,8 +62,9 @@ class PropertyController extends ApiController
     /**
      * Display the specified property
      */
-    public function show(Property $property)
+    public function show(Request $request, Property $property)
     {
+        $this->authorizePropertyAccess($request->user(), $property);
         $property->load(['owner', 'units', 'managers', 'expenses']);
         
         return $this->successResponse($property, 'Property retrieved successfully');
@@ -80,7 +75,9 @@ class PropertyController extends ApiController
      */
     public function update(Request $request, Property $property)
     {
-        $request->validate([
+        $this->authorizePropertyManagement($request->user(), $property);
+
+        $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'address' => 'sometimes|required|string|max:255',
             'city' => 'sometimes|required|string|max:100',
@@ -93,7 +90,7 @@ class PropertyController extends ApiController
             'property_type' => 'nullable|string|max:50',
         ]);
 
-        $property->update($request->all());
+        $property->update($validated);
 
         return $this->successResponse($property, 'Property updated successfully');
     }
@@ -101,8 +98,9 @@ class PropertyController extends ApiController
     /**
      * Remove the specified property
      */
-    public function destroy(Property $property)
+    public function destroy(Request $request, Property $property)
     {
+        $this->authorizePropertyManagement($request->user(), $property);
         $property->delete();
 
         return $this->successResponse([], 'Property deleted successfully');

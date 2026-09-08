@@ -36,7 +36,7 @@ export default function MaintenancePage() {
     fetchTenants();
   }, [isAuthenticated, router]);
 
-  const fetchMaintenanceRequests = async () => {
+  async function fetchMaintenanceRequests() {
     try {
       const response = await apiClient.getMaintenanceRequests();
       if (response.success) {
@@ -47,9 +47,9 @@ export default function MaintenancePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const fetchProperties = async () => {
+  async function fetchProperties() {
     try {
       const response = await apiClient.getProperties();
       if (response.success) {
@@ -58,9 +58,9 @@ export default function MaintenancePage() {
     } catch (error) {
       console.error('Failed to fetch properties:', error);
     }
-  };
+  }
 
-  const fetchTenants = async () => {
+  async function fetchTenants() {
     try {
       const response = await apiClient.getTenants();
       if (response.success) {
@@ -69,7 +69,7 @@ export default function MaintenancePage() {
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
     }
-  };
+  }
 
   const fetchUnits = async (propertyId) => {
     try {

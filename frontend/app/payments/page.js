@@ -46,7 +46,7 @@ export default function PaymentsPage() {
     fetchTenants();
   }, [isAuthenticated, router]);
 
-  const fetchPayments = async () => {
+  async function fetchPayments() {
     try {
       const response = await apiClient.getPayments();
       if (response.success) {
@@ -57,9 +57,9 @@ export default function PaymentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const fetchLeases = async () => {
+  async function fetchLeases() {
     try {
       const response = await apiClient.getLeases();
       if (response.success) {
@@ -68,9 +68,9 @@ export default function PaymentsPage() {
     } catch (error) {
       console.error('Failed to fetch leases:', error);
     }
-  };
+  }
 
-  const fetchTenants = async () => {
+  async function fetchTenants() {
     try {
       const response = await apiClient.getTenants();
       if (response.success) {
@@ -79,7 +79,7 @@ export default function PaymentsPage() {
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
     }
-  };
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

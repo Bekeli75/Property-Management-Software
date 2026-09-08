@@ -41,7 +41,7 @@ export default function TenantsPage() {
     fetchUsers();
   }, [isAuthenticated, isOwner, isManager, isAdmin, router]);
 
-  const fetchTenants = async () => {
+  async function fetchTenants() {
     try {
       const response = await apiClient.getTenants();
       if (response.success) {
@@ -52,9 +52,9 @@ export default function TenantsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const fetchUsers = async () => {
+  async function fetchUsers() {
     try {
       // Get users with tenant role
       const response = await apiClient.getUsers('tenant');
@@ -64,7 +64,7 @@ export default function TenantsPage() {
     } catch (error) {
       console.error('Failed to fetch users:', error);
     }
-  };
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -303,7 +303,7 @@ export default function TenantsPage() {
                   >
                     <option value="national_id">National ID</option>
                     <option value="passport">Passport</option>
-                    <option value="driver_license">Driver's License</option>
+                    <option value="driver_license">Driver&apos;s License</option>
                     <option value="other">Other</option>
                   </select>
                 </div>

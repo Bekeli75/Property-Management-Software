@@ -38,7 +38,7 @@ export default function PropertiesPage() {
     fetchProperties();
   }, [isAuthenticated, isOwner, isManager, isAdmin, router]);
 
-  const fetchProperties = async () => {
+  async function fetchProperties() {
     try {
       const response = await apiClient.getProperties();
       if (response.success) {
@@ -49,7 +49,7 @@ export default function PropertiesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

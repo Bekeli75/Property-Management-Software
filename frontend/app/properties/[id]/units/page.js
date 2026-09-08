@@ -35,7 +35,7 @@ export default function PropertyUnitsPage() {
     fetchUnits();
   }, [isAuthenticated, params.id, router]);
 
-  const fetchUnits = async () => {
+  async function fetchUnits() {
     try {
       const [unitsResponse, propertyResponse] = await Promise.all([
         apiClient.getUnitsByProperty(params.id),
@@ -53,7 +53,7 @@ export default function PropertyUnitsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -23,7 +23,7 @@ export default function PropertyDetailPage() {
     fetchProperty();
   }, [isAuthenticated, params.id, router]);
 
-  const fetchProperty = async () => {
+  async function fetchProperty() {
     try {
       const response = await apiClient.getProperty(params.id);
       if (response.success) {
@@ -36,7 +36,7 @@ export default function PropertyDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const handleUpdate = async (e) => {
     e.preventDefault();

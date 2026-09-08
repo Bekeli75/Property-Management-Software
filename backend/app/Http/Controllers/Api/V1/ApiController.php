@@ -3,11 +3,35 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Property;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ApiController extends Controller
 {
+    protected function authorizePropertyAccess(User $user, Property $property): void
+    {
+        abort_unless(
+            $user->isAdmin()
+                || ($user->isOwner() && $property->owner_id === $user->id)
+                || ($user->isManager() && $property->managers()->whereKey($user->id)->exists()),
+            403,
+            'You are not authorized to access this property.'
+        );
+    }
+
+    protected function authorizePropertyManagement(User $user, Property $property): void
+    {
+        abort_unless(
+            $user->isAdmin()
+                || ($user->isOwner() && $property->owner_id === $user->id)
+                || ($user->isManager() && $property->managers()->whereKey($user->id)->exists()),
+            403,
+            'You are not authorized to manage this property.'
+        );
+    }
+
     /**
      * Success response method
      */
