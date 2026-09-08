@@ -70,7 +70,7 @@ class Lease extends Model
 
     public function getOutstandingRent(): float
     {
-        $totalExpected = $this->payments()->sum('amount');
-        return $this->monthly_rent - $totalExpected;
+        $totalPaid = $this->payments()->where('status', 'completed')->sum('amount');
+        return max(0, (float) $this->monthly_rent - (float) $totalPaid);
     }
 }
