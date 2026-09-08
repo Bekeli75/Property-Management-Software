@@ -41,6 +41,14 @@ class ApiClient {
     return headers;
   }
 
+  getRequestBody(body) {
+    if (typeof FormData !== 'undefined' && body instanceof FormData) {
+      return { body, headers: {} };
+    }
+
+    return { body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } };
+  }
+
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const config = {
@@ -50,6 +58,10 @@ class ApiClient {
         ...options.headers,
       },
     };
+
+    if (typeof FormData !== 'undefined' && config.body instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
 
     try {
       const response = await fetch(url, config);
@@ -102,23 +114,26 @@ class ApiClient {
   }
 
   async post(endpoint, body) {
+    const requestBody = this.getRequestBody(body);
     return this.request(endpoint, {
       method: 'POST',
-      body: JSON.stringify(body),
+      ...requestBody,
     });
   }
 
   async put(endpoint, body) {
+    const requestBody = this.getRequestBody(body);
     return this.request(endpoint, {
       method: 'PUT',
-      body: JSON.stringify(body),
+      ...requestBody,
     });
   }
 
   async patch(endpoint, body) {
+    const requestBody = this.getRequestBody(body);
     return this.request(endpoint, {
       method: 'PATCH',
-      body: JSON.stringify(body),
+      ...requestBody,
     });
   }
 
@@ -205,6 +220,10 @@ class ApiClient {
   }
 
   async updateProperty(id, data) {
+    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+      data.append('_method', 'PATCH');
+      return this.post(`/properties/${id}`, data);
+    }
     return this.put(`/properties/${id}`, data);
   }
 

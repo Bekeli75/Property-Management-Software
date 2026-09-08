@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
 import Logo from '@/components/Logo';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import PropertyImageFields from '@/components/PropertyImageFields';
 
 export default function PropertiesPage() {
   const { user, isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
@@ -15,6 +16,7 @@ export default function PropertiesPage() {
   const [showModal, setShowModal] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [imageFiles, setImageFiles] = useState({});
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -57,7 +59,10 @@ export default function PropertiesPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await apiClient.createProperty(formData);
+      const payload = new FormData();
+      Object.entries(formData).forEach(([key, value]) => { if (value !== '') payload.append(key, value); });
+      Object.entries(imageFiles).forEach(([key, file]) => { if (file) payload.append(key, file); });
+      const response = await apiClient.createProperty(payload);
       if (response.success) {
         setShowModal(false);
         setFormData({
@@ -71,6 +76,7 @@ export default function PropertiesPage() {
           year_built: '',
           property_type: '',
         });
+        setImageFiles({});
         fetchProperties();
       }
     } catch (error) {
@@ -318,6 +324,7 @@ export default function PropertiesPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+                <PropertyImageFields files={imageFiles} setFiles={setImageFiles} />
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"

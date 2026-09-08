@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import apiClient from '@/lib/api';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import PropertyImageFields from '@/components/PropertyImageFields';
 
 export default function PropertyDetailPage() {
   const { user, isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
@@ -15,6 +16,7 @@ export default function PropertyDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [imageFiles, setImageFiles] = useState({});
   const [editFormData, setEditFormData] = useState({});
 
   const fetchProperty = useCallback(async () => {
@@ -44,9 +46,16 @@ export default function PropertyDetailPage() {
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
-      const response = await apiClient.updateProperty(params.id, editFormData);
+      const payload = new FormData();
+      Object.entries(editFormData).forEach(([key, value]) => {
+        if (['image_1', 'image_2', 'image_3'].includes(key) || value === null || value === undefined) return;
+        payload.append(key, value);
+      });
+      Object.entries(imageFiles).forEach(([key, file]) => { if (file) payload.append(key, file); });
+      const response = await apiClient.updateProperty(params.id, payload);
       if (response.success) {
         setShowEditModal(false);
+        setImageFiles({});
         fetchProperty();
       }
     } catch (error) {
@@ -362,6 +371,7 @@ export default function PropertyDetailPage() {
                   </select>
                 </div>
                 <div className="flex gap-3 pt-4">
+                  <PropertyImageFields files={imageFiles} setFiles={setImageFiles} existing={editFormData} />
                   <button
                     type="button"
                     onClick={() => setShowEditModal(false)}

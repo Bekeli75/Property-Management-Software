@@ -24,6 +24,9 @@ class Property extends Model
         'total_area',
         'year_built',
         'property_type',
+        'image_1',
+        'image_2',
+        'image_3',
     ];
 
     protected $casts = [

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Property;
 
 class PropertyController extends ApiController
@@ -49,7 +50,16 @@ class PropertyController extends ApiController
             'total_area' => 'nullable|numeric',
             'year_built' => 'nullable|integer',
             'property_type' => 'nullable|string|max:50',
+            'image_1' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'image_2' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'image_3' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
+
+        foreach (['image_1', 'image_2', 'image_3'] as $image) {
+            if ($request->hasFile($image)) {
+                $validated[$image] = $request->file($image)->store('properties', 'public');
+            }
+        }
 
         $property = Property::create([
             'owner_id' => $request->user()->id,
@@ -88,7 +98,19 @@ class PropertyController extends ApiController
             'total_area' => 'nullable|numeric',
             'year_built' => 'nullable|integer',
             'property_type' => 'nullable|string|max:50',
+            'image_1' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'image_2' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'image_3' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
+
+        foreach (['image_1', 'image_2', 'image_3'] as $image) {
+            if ($request->hasFile($image)) {
+                if ($property->{$image}) {
+                    Storage::disk('public')->delete($property->{$image});
+                }
+                $validated[$image] = $request->file($image)->store('properties', 'public');
+            }
+        }
 
         $property->update($validated);
 
@@ -101,6 +123,11 @@ class PropertyController extends ApiController
     public function destroy(Request $request, Property $property)
     {
         $this->authorizePropertyManagement($request->user(), $property);
+        foreach (['image_1', 'image_2', 'image_3'] as $image) {
+            if ($property->{$image}) {
+                Storage::disk('public')->delete($property->{$image});
+            }
+        }
         $property->delete();
 
         return $this->successResponse([], 'Property deleted successfully');
