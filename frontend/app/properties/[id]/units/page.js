@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import apiClient from '@/lib/api';
@@ -26,16 +26,7 @@ export default function PropertyUnitsPage() {
     description: '',
   });
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-
-    fetchUnits();
-  }, [isAuthenticated, params.id, router]);
-
-  async function fetchUnits() {
+  const fetchUnits = useCallback(async () => {
     try {
       const [unitsResponse, propertyResponse] = await Promise.all([
         apiClient.getUnitsByProperty(params.id),
@@ -53,7 +44,16 @@ export default function PropertyUnitsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [params.id]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+
+    void Promise.resolve().then(fetchUnits);
+  }, [fetchUnits, isAuthenticated, router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

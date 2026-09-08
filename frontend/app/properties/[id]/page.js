@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useParams } from 'next/navigation';
 import apiClient from '@/lib/api';
@@ -14,16 +14,7 @@ export default function PropertyDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState({});
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-
-    fetchProperty();
-  }, [isAuthenticated, params.id, router]);
-
-  async function fetchProperty() {
+  const fetchProperty = useCallback(async () => {
     try {
       const response = await apiClient.getProperty(params.id);
       if (response.success) {
@@ -36,7 +27,16 @@ export default function PropertyDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [params.id, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
+    }
+
+    void Promise.resolve().then(fetchProperty);
+  }, [fetchProperty, isAuthenticated, router]);
 
   const handleUpdate = async (e) => {
     e.preventDefault();
