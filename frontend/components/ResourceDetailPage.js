@@ -1,0 +1,252 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import apiClient from '@/lib/api';
+import Logo from '@/components/Logo';
+
+const resourceConfig = {
+  tenant: {
+    label: 'Tenant',
+    collectionPath: '/tenants',
+    load: (id) => apiClient.getTenant(id),
+    groups: (item) => [
+      {
+        title: 'Contact',
+        fields: [
+          ['Name', item.user?.name],
+          ['Email', item.user?.email],
+          ['Phone', item.user?.phone],
+          ['Status', item.status],
+        ],
+      },
+      {
+        title: 'Profile',
+        fields: [
+          ['ID type', item.id_type],
+          ['ID number', item.id_number],
+          ['Employment', item.employment_status],
+          ['Monthly income', formatCurrency(item.monthly_income)],
+        ],
+      },
+    ],
+  },
+  lease: {
+    label: 'Lease',
+    collectionPath: '/leases',
+    load: (id) => apiClient.getLease(id),
+    groups: (item) => [
+      {
+        title: 'Lease details',
+        fields: [
+          ['Tenant', item.tenant?.user?.name],
+          ['Property', item.unit?.property?.name],
+          ['Unit', item.unit?.unit_number],
+          ['Status', item.status],
+        ],
+      },
+      {
+        title: 'Terms',
+        fields: [
+          ['Start date', formatDate(item.start_date)],
+          ['End date', formatDate(item.end_date)],
+          ['Monthly rent', formatCurrency(item.monthly_rent)],
+          ['Security deposit', formatCurrency(item.security_deposit)],
+        ],
+      },
+    ],
+  },
+  payment: {
+    label: 'Payment',
+    collectionPath: '/payments',
+    load: (id) => apiClient.getPayment(id),
+    groups: (item) => [
+      {
+        title: 'Payment details',
+        fields: [
+          ['Reference', item.reference_number],
+          ['Tenant', item.tenant?.user?.name],
+          ['Property', item.lease?.unit?.property?.name],
+          ['Unit', item.lease?.unit?.unit_number],
+        ],
+      },
+      {
+        title: 'Settlement',
+        fields: [
+          ['Amount', formatCurrency(item.amount)],
+          ['Status', item.status],
+          ['Payment method', item.payment_method],
+          ['Payment date', formatDate(item.payment_date)],
+          ['Due date', formatDate(item.due_date)],
+        ],
+      },
+    ],
+  },
+  maintenance: {
+    label: 'Maintenance request',
+    collectionPath: '/maintenance',
+    load: (id) => apiClient.getMaintenanceRequest(id),
+    groups: (item) => [
+      {
+        title: 'Request details',
+        fields: [
+          ['Property', item.property?.name],
+          ['Unit', item.unit?.unit_number],
+          ['Requester', item.tenant?.user?.name],
+          ['Category', item.category],
+          ['Priority', item.priority],
+          ['Status', item.status],
+        ],
+      },
+      {
+        title: 'Schedule and cost',
+        fields: [
+          ['Requested', formatDate(item.requested_date)],
+          ['Scheduled', formatDate(item.scheduled_date)],
+          ['Estimated cost', formatCurrency(item.estimated_cost)],
+          ['Actual cost', formatCurrency(item.actual_cost)],
+        ],
+      },
+    ],
+  },
+  unit: {
+    label: 'Unit',
+    collectionPath: '/properties',
+    load: (id) => apiClient.getUnit(id),
+    groups: (item) => [
+      {
+        title: 'Unit details',
+        fields: [
+          ['Property', item.property?.name],
+          ['Unit number', item.unit_number],
+          ['Type', item.type],
+          ['Floor', item.floor],
+          ['Status', item.status],
+        ],
+      },
+      {
+        title: 'Rental profile',
+        fields: [
+          ['Bedrooms', item.bedrooms],
+          ['Bathrooms', item.bathrooms],
+          ['Area', item.area ? `${item.area} sq ft` : null],
+          ['Base rent', formatCurrency(item.base_rent)],
+        ],
+      },
+    ],
+  },
+};
+
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === '') return null;
+  return `ETB ${Number(value).toLocaleString()}`;
+}
+
+function formatDate(value) {
+  if (!value) return null;
+  return new Date(value).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function displayValue(value) {
+  if (value === null || value === undefined || value === '') return 'Not provided';
+  return String(value).replaceAll('_', ' ');
+}
+
+export default function ResourceDetailPage({ resourceType }) {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const params = useParams();
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const config = resourceConfig[resourceType];
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !config || !params.id) return undefined;
+
+    let active = true;
+    config.load(params.id)
+      .then((response) => {
+        if (!active) return;
+        if (response.success) {
+          setItem(response.data);
+        } else {
+          setError(response.message || 'Unable to load this record.');
+        }
+      })
+      .catch(() => {
+        if (active) setError('Unable to load this record. Please try again.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [config, isAuthenticated, params.id]);
+
+  if (!config) return null;
+
+  if (authLoading || loading) {
+    return <main className="flex min-h-screen items-center justify-center bg-slate-50"><p className="text-sm text-slate-500">Loading {config.label.toLowerCase()}...</p></main>;
+  }
+
+  if (error || !item) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-5 py-8 sm:px-8">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-sm font-semibold text-red-700">{error || `${config.label} not found.`}</p>
+          <button onClick={() => router.push(config.collectionPath)} className="mt-5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Back to {config.label.toLowerCase()}s</button>
+        </div>
+      </main>
+    );
+  }
+
+  const title = item.name || item.title || item.reference_number || item.unit_number || `${config.label} #${item.id}`;
+  const description = item.description || item.notes || 'Review the record details and related activity.';
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
+          <Logo size="sm" />
+          <button onClick={() => router.push(config.collectionPath)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-900">Back to {config.label.toLowerCase()}s</button>
+        </div>
+      </header>
+      <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
+        <section className="rounded-2xl bg-slate-900 p-6 text-white shadow-sm sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300">{config.label}</p>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">{description}</p>
+        </section>
+        <section className="mt-6 grid gap-6 md:grid-cols-2">
+          {config.groups(item).map((group) => (
+            <div key={group.title} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <h2 className="text-base font-semibold text-slate-950">{group.title}</h2>
+              <dl className="mt-5 divide-y divide-slate-100">
+                {group.fields.map(([label, value]) => (
+                  <div key={label} className="flex items-start justify-between gap-5 py-3 first:pt-0 last:pb-0">
+                    <dt className="text-sm text-slate-500">{label}</dt>
+                    <dd className="text-right text-sm font-semibold capitalize text-slate-900">{displayValue(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ))}
+        </section>
+      </main>
+    </div>
+  );
+}
