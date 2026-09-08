@@ -18,7 +18,9 @@ class ExpenseController extends ApiController
         $query = Expense::query();
         
         // Role-based filtering
-        if ($user->isOwner()) {
+        if ($user->isTenant()) {
+            $query->whereRaw('1 = 0');
+        } elseif ($user->isOwner()) {
             $query->whereHas('property', function ($q) use ($user) {
                 $q->where('owner_id', $user->id);
             });
@@ -40,7 +42,9 @@ class ExpenseController extends ApiController
      */
     public function store(Request $request)
     {
-        $request->validate([
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot create expenses.');
+
+        $validated = $request->validate([
             'property_id' => 'required|exists:properties,id',
             'maintenance_id' => 'nullable|exists:maintenances,id',
             'title' => 'required|string|max:255',
@@ -54,18 +58,11 @@ class ExpenseController extends ApiController
             'receipt_url' => 'nullable|string',
         ]);
 
+        $property = \App\Models\Property::findOrFail($validated['property_id']);
+        $this->authorizePropertyManagement($request->user(), $property);
+
         $expense = Expense::create([
-            'property_id' => $request->property_id,
-            'maintenance_id' => $request->maintenance_id,
-            'title' => $request->title,
-            'description' => $request->description,
-            'category' => $request->category,
-            'amount' => $request->amount,
-            'expense_date' => $request->expense_date,
-            'vendor' => $request->vendor,
-            'reference_number' => $request->reference_number,
-            'notes' => $request->notes,
-            'receipt_url' => $request->receipt_url,
+            ...$validated,
             'status' => 'pending',
         ]);
 
@@ -75,8 +72,10 @@ class ExpenseController extends ApiController
     /**
      * Display the specified expense
      */
-    public function show(Expense $expense)
+    public function show(Request $request, Expense $expense)
     {
+        $expense->loadMissing('property');
+        $this->authorizePropertyAccess($request->user(), $expense->property);
         $expense->load(['property', 'maintenance']);
 
         return $this->successResponse($expense, 'Expense retrieved successfully');
@@ -87,7 +86,10 @@ class ExpenseController extends ApiController
      */
     public function update(Request $request, Expense $expense)
     {
-        $request->validate([
+        $expense->loadMissing('property');
+        $this->authorizePropertyManagement($request->user(), $expense->property);
+
+        $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'category' => 'sometimes|required|in:maintenance,utilities,insurance,taxes,management_fee,marketing,other',
@@ -100,7 +102,7 @@ class ExpenseController extends ApiController
             'receipt_url' => 'nullable|string',
         ]);
 
-        $expense->update($request->all());
+        $expense->update($validated);
 
         return $this->successResponse($expense, 'Expense updated successfully');
     }
@@ -108,8 +110,10 @@ class ExpenseController extends ApiController
     /**
      * Remove the specified expense
      */
-    public function destroy(Expense $expense)
+    public function destroy(Request $request, Expense $expense)
     {
+        $expense->loadMissing('property');
+        $this->authorizePropertyManagement($request->user(), $expense->property);
         $expense->delete();
 
         return $this->successResponse([], 'Expense deleted successfully');
