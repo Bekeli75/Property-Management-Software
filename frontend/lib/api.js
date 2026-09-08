@@ -65,7 +65,10 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      const data = contentType.includes('application/json')
+        ? await response.json()
+        : null;
 
       if (!response.ok) {
         if (response.status === 401 && !endpoint.includes('/auth/login')) {
@@ -75,6 +78,10 @@ class ApiClient {
           }
         }
         throw new Error(this.getFriendlyError(response.status, endpoint));
+      }
+
+      if (!data) {
+        throw new Error('The service returned an unexpected response. Please try again.');
       }
 
       return data;
