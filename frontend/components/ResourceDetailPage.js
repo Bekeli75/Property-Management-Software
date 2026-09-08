@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import apiClient from '@/lib/api';
-import Logo from '@/components/Logo';
+import AppShell from '@/components/AppShell';
 
 const resourceConfig = {
   tenant: {
@@ -218,14 +218,9 @@ export default function ResourceDetailPage({ resourceType }) {
   const description = item.description || item.notes || 'Review the record details and related activity.';
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8">
-          <Logo size="sm" />
-          <button onClick={() => router.push(config.collectionPath)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300 hover:text-slate-900">Back to {config.label.toLowerCase()}s</button>
-        </div>
-      </header>
+    <AppShell>
       <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
+        <button onClick={() => router.push(config.collectionPath)} className="mb-5 text-sm font-semibold text-teal-700 hover:text-teal-900">Back to {config.label.toLowerCase()}s</button>
         <section className="rounded-2xl bg-slate-900 p-6 text-white shadow-sm sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300">{config.label}</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1>
@@ -247,6 +242,6 @@ export default function ResourceDetailPage({ resourceType }) {
           ))}
         </section>
       </main>
-    </div>
+    </AppShell>
   );
 }
