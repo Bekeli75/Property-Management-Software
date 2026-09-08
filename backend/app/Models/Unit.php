@@ -46,4 +46,11 @@ class Unit extends Model
     {
         return $this->hasOne(Lease::class)->where('status', 'active');
     }
+
+    public function activeLeaseFor(\App\Models\Tenant $tenant)
+    {
+        return $this->hasOne(Lease::class)
+            ->where('status', 'active')
+            ->where('tenant_id', $tenant->id);
+    }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/Logo';
@@ -9,24 +10,24 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
     password_confirmation: '',
-    phone: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const router = useRouter();
 
-  const handleChange = (e) => {
+  const handleChange = (event) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [event.target.name]: event.target.value,
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
 
     if (formData.password !== formData.password_confirmation) {
@@ -34,62 +35,57 @@ export default function RegisterPage() {
       return;
     }
 
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
     setLoading(true);
 
     const result = await register(formData);
-    
+
     if (result.success) {
       router.push('/dashboard');
     } else {
       setError(result.message || 'Registration failed');
     }
-    
+
     setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-teal-50 px-4 py-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
-        <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <Logo size="lg" />
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+      <div className="w-full max-w-md">
+        <div className="card p-8 sm:p-10">
+          <div className="flex justify-center">
+            <Logo size="md" markOnly />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">
-            Create Tenant Account
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Register as a tenant to access your rental information
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
-          
-          <div className="space-y-4">
+          <p className="mt-6 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700">Tenant registration</p>
+          <h1 className="mt-2 text-center text-2xl font-semibold tracking-tight text-slate-950">Create your account</h1>
+          <p className="mt-2 text-center text-sm text-slate-500">Register to access your lease, pay rent, and request maintenance.</p>
+
+          <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+            {error && (
+              <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p>
+            )}
+
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full Name
-              </label>
+              <label htmlFor="name" className="field-label">Full name</label>
               <input
                 id="name"
                 name="name"
                 type="text"
+                autoComplete="name"
                 required
                 value={formData.name}
                 onChange={handleChange}
-                className="mt-1 block w-full bg-white px-3 py-2 text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="John Doe"
+                className="field-input mt-1.5 w-full"
+                placeholder="e.g. Sara Ahmed"
               />
             </div>
-            
+
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
+              <label htmlFor="email" className="field-label">Email address</label>
               <input
                 id="email"
                 name="email"
@@ -98,78 +94,65 @@ export default function RegisterPage() {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="mt-1 block w-full bg-white px-3 py-2 text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="field-input mt-1.5 w-full"
                 placeholder="you@example.com"
               />
             </div>
-            
+
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                Phone Number (Optional)
-              </label>
+              <label htmlFor="phone" className="field-label">Phone number <span className="font-normal text-slate-400">(optional)</span></label>
               <input
                 id="phone"
                 name="phone"
                 type="tel"
+                autoComplete="tel"
                 value={formData.phone}
                 onChange={handleChange}
-                className="mt-1 block w-full bg-white px-3 py-2 text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                className="field-input mt-1.5 w-full"
                 placeholder="+251 911 234 567"
               />
             </div>
-            
+
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
+              <label htmlFor="password" className="field-label">Password</label>
               <input
                 id="password"
                 name="password"
                 type="password"
+                autoComplete="new-password"
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="mt-1 block w-full bg-white px-3 py-2 text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="••••••••"
+                className="field-input mt-1.5 w-full"
+                placeholder="At least 8 characters"
               />
             </div>
-            
+
             <div>
-              <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-700">
-                Confirm Password
-              </label>
+              <label htmlFor="password_confirmation" className="field-label">Confirm password</label>
               <input
                 id="password_confirmation"
                 name="password_confirmation"
                 type="password"
+                autoComplete="new-password"
                 required
                 value={formData.password_confirmation}
                 onChange={handleChange}
-                className="mt-1 block w-full bg-white px-3 py-2 text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="••••••••"
+                className="field-input mt-1.5 w-full"
+                placeholder="Repeat your password"
               />
             </div>
-          </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Creating account...' : 'Create account'}
+            <button type="submit" disabled={loading} className="btn btn-primary w-full">
+              {loading ? 'Creating account…' : 'Create account'}
             </button>
-          </div>
+          </form>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <a href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-                Sign in here
-              </a>
-            </p>
-          </div>
-        </form>
+          <p className="mt-6 text-center text-sm text-slate-500">
+            Already have an account?{' '}
+            <Link href="/login" className="font-semibold text-teal-700 hover:text-teal-900">Sign in here</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -1,41 +1,65 @@
-export default function Logo({ size = 'md' }) {
-  const sizeClasses = {
-    sm: { mark: 'h-8 w-8', name: 'text-lg', tagline: 'text-[0.5rem]' },
-    md: { mark: 'h-10 w-10', name: 'text-xl', tagline: 'text-[0.55rem]' },
-    lg: { mark: 'h-14 w-14', name: 'text-2xl', tagline: 'text-[0.6rem]' },
-  };
-  const currentSize = sizeClasses[size] || sizeClasses.md;
+'use client';
+
+function LogoMark({ size = 32, variant = 'dark', className = '', glow = false }) {
+  const fill = variant === 'light' ? '#ffffff' : '#14b8a6';
+  const secondary = variant === 'light' ? 'rgba(255, 255, 255, 0.6)' : '#0f766e';
 
   return (
-    <div className="flex items-center gap-2" aria-label="Propentra">
-      <div className={`flex shrink-0 items-center justify-center rounded-xl bg-slate-900 ${currentSize.mark}`}>
-        <svg viewBox="0 0 48 48" className="h-[78%] w-[78%]" aria-hidden="true">
-          <path
-            d="M8 22 24 9l16 13v16a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V22Z"
-            fill="none"
-            stroke="#67e8f9"
-            strokeWidth="3"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M19 36V20h7.5a5 5 0 0 1 0 10H19m0-5h7"
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
-      <div className="flex flex-col">
-        <span className={`${currentSize.name} font-bold leading-none tracking-tight`}>
-          <span className="text-blue-900">PROP</span>
-          <span className="text-teal-600">ENTRA</span>
-        </span>
-        <span className={`${currentSize.tagline} text-blue-900 font-medium tracking-[0.08em]`}>
-          PROPERTY MANAGEMENT SOFTWARE
-        </span>
-      </div>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 40 40"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden="true"
+    >
+      {glow && <circle cx="20" cy="20" r="19.5" fill="rgba(20, 184, 166, 0.12)" />}
+      {/* Building / property outline */}
+      <rect x="6" y="12" width="28" height="22" rx="2.5" stroke={fill} strokeWidth="2.6" />
+      {/* Roof line */}
+      <path d="M6 12L20 4L34 12" stroke={fill} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+      {/* P letterform formed by vertical bar + arch inside building */}
+      <path d="M16 26V15" stroke={fill} strokeWidth="2.8" strokeLinecap="round" />
+      <path d="M16 15C20.5 14.5 25 16.5 25 20.5C25 24.5 20.5 26.5 16 26" stroke={fill} strokeWidth="2.8" strokeLinecap="round" />
+      {/* Door detail */}
+      <path d="M17 34V28" stroke={secondary} strokeWidth="2" strokeLinecap="round" />
+      <path d="M23 34V28" stroke={secondary} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export default function Logo({ size = 'md', variant = 'dark', showTagline = true, markOnly = false, className = '' }) {
+  const sizes = {
+    sm: { mark: 28, compact: false },
+    md: { mark: 34, compact: true },
+    lg: { mark: 40, compact: true },
+  };
+
+  const config = sizes[size] || sizes.md;
+
+  if (markOnly) {
+    return <LogoMark size={config.mark} variant={variant} className={className} />;
+  }
+
+  const wordColor = variant === 'light' ? 'text-white' : 'text-slate-950';
+  const taglineColor = variant === 'light' ? 'text-slate-400' : 'text-slate-500';
+
+  return (
+    <div className={`flex items-center gap-2.5 ${className}`}>
+      <LogoMark size={config.mark} variant={variant} />
+      {config.compact && (
+        <div className="leading-none">
+          <p className={`text-lg font-bold uppercase tracking-[0.14em] ${wordColor}`}>
+            Propentra
+          </p>
+          {showTagline && (
+            <p className={`mt-1 text-[10px] font-medium tracking-[0.08em] ${taglineColor}`}>
+              Property Intelligence &amp; Management
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

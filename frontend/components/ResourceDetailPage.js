@@ -5,111 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import apiClient from '@/lib/api';
 import AppShell from '@/components/AppShell';
+import AuthGuard from '@/components/AuthGuard';
 
 const resourceConfig = {
-  tenant: {
-    label: 'Tenant',
-    collectionPath: '/tenants',
-    load: (id) => apiClient.getTenant(id),
-    groups: (item) => [
-      {
-        title: 'Contact',
-        fields: [
-          ['Name', item.user?.name],
-          ['Email', item.user?.email],
-          ['Phone', item.user?.phone],
-          ['Status', item.status],
-        ],
-      },
-      {
-        title: 'Profile',
-        fields: [
-          ['ID type', item.id_type],
-          ['ID number', item.id_number],
-          ['Employment', item.employment_status],
-          ['Monthly income', formatCurrency(item.monthly_income)],
-        ],
-      },
-    ],
-  },
-  lease: {
-    label: 'Lease',
-    collectionPath: '/leases',
-    load: (id) => apiClient.getLease(id),
-    groups: (item) => [
-      {
-        title: 'Lease details',
-        fields: [
-          ['Tenant', item.tenant?.user?.name],
-          ['Property', item.unit?.property?.name],
-          ['Unit', item.unit?.unit_number],
-          ['Status', item.status],
-        ],
-      },
-      {
-        title: 'Terms',
-        fields: [
-          ['Start date', formatDate(item.start_date)],
-          ['End date', formatDate(item.end_date)],
-          ['Monthly rent', formatCurrency(item.monthly_rent)],
-          ['Security deposit', formatCurrency(item.security_deposit)],
-        ],
-      },
-    ],
-  },
-  payment: {
-    label: 'Payment',
-    collectionPath: '/payments',
-    load: (id) => apiClient.getPayment(id),
-    groups: (item) => [
-      {
-        title: 'Payment details',
-        fields: [
-          ['Reference', item.reference_number],
-          ['Tenant', item.tenant?.user?.name],
-          ['Property', item.lease?.unit?.property?.name],
-          ['Unit', item.lease?.unit?.unit_number],
-        ],
-      },
-      {
-        title: 'Settlement',
-        fields: [
-          ['Amount', formatCurrency(item.amount)],
-          ['Status', item.status],
-          ['Payment method', item.payment_method],
-          ['Payment date', formatDate(item.payment_date)],
-          ['Due date', formatDate(item.due_date)],
-        ],
-      },
-    ],
-  },
-  maintenance: {
-    label: 'Maintenance request',
-    collectionPath: '/maintenance',
-    load: (id) => apiClient.getMaintenanceRequest(id),
-    groups: (item) => [
-      {
-        title: 'Request details',
-        fields: [
-          ['Property', item.property?.name],
-          ['Unit', item.unit?.unit_number],
-          ['Requester', item.tenant?.user?.name],
-          ['Category', item.category],
-          ['Priority', item.priority],
-          ['Status', item.status],
-        ],
-      },
-      {
-        title: 'Schedule and cost',
-        fields: [
-          ['Requested', formatDate(item.requested_date)],
-          ['Scheduled', formatDate(item.scheduled_date)],
-          ['Estimated cost', formatCurrency(item.estimated_cost)],
-          ['Actual cost', formatCurrency(item.actual_cost)],
-        ],
-      },
-    ],
-  },
   unit: {
     label: 'Unit',
     collectionPath: '/properties',
@@ -157,7 +55,7 @@ function displayValue(value) {
   return String(value).replaceAll('_', ' ');
 }
 
-export default function ResourceDetailPage({ resourceType }) {
+export default function ResourceDetailPage({ resourceType, roles }) {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
@@ -218,7 +116,8 @@ export default function ResourceDetailPage({ resourceType }) {
   const description = item.description || item.notes || 'Review the record details and related activity.';
 
   return (
-    <AppShell>
+    <AuthGuard roles={roles}>
+      <AppShell>
       <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
         <button onClick={() => router.push(config.collectionPath)} className="mb-5 text-sm font-semibold text-teal-700 hover:text-teal-900">Back to {config.label.toLowerCase()}s</button>
         <section className="rounded-2xl bg-slate-900 p-6 text-white shadow-sm sm:p-8">
@@ -242,6 +141,7 @@ export default function ResourceDetailPage({ resourceType }) {
           ))}
         </section>
       </main>
-    </AppShell>
+      </AppShell>
+    </AuthGuard>
   );
 }

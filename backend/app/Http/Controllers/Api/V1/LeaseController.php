@@ -37,9 +37,34 @@ class LeaseController extends ApiController
             });
         }
         
-        $leases = $query->with(['tenant.user', 'unit.property'])->get();
-        
+$leases = $query->with(['tenant.user', 'unit.property'])->get();
+
         return $this->successResponse($leases, 'Leases retrieved successfully');
+    }
+
+    /**
+     * Persist uploaded lease attachment files.
+     */
+    private function storeAttachments(Request $request, Lease $lease): void
+    {
+        $files = $request->file('attachments');
+
+        if (!is_array($files)) {
+            return;
+        }
+
+        $files = array_values(array_filter($files));
+
+        foreach (array_slice($files, 0, 5) as $file) {
+            $path = $file->store('lease-attachments', 'public');
+
+            $lease->attachments()->create([
+                'file_path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+            ]);
+        }
     }
 
     /**
@@ -60,6 +85,8 @@ class LeaseController extends ApiController
             'payment_day' => 'required|integer|min:1|max:31',
             'terms' => 'nullable|string',
             'notes' => 'nullable|string',
+            'attachments' => 'nullable|array|max:5',
+            'attachments.*' => 'file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
         ]);
 
         $unit = Unit::with('property')->findOrFail($validated['unit_id']);
@@ -88,10 +115,12 @@ class LeaseController extends ApiController
             'status' => 'active',
         ]);
 
+        $this->storeAttachments($request, $lease);
+
         // Update unit status
         $lease->unit->update(['status' => 'occupied']);
 
-        return $this->successResponse($lease, 'Lease created successfully', 201);
+        return $this->successResponse($lease->load('attachments'), 'Lease created successfully', 201);
     }
 
     /**
@@ -100,7 +129,7 @@ class LeaseController extends ApiController
     public function show(Request $request, Lease $lease)
     {
         $this->authorizeLeaseAccess($request->user(), $lease);
-        $lease->load(['tenant.user', 'unit.property', 'payments']);
+        $lease->load(['tenant.user', 'unit.property', 'payments', 'attachments']);
 
         return $this->successResponse($lease, 'Lease retrieved successfully');
     }

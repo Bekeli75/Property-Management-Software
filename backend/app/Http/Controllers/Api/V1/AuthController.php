@@ -87,7 +87,11 @@ class AuthController extends ApiController
      */
     public function me(Request $request)
     {
-        return $this->successResponse($request->user(), 'User retrieved successfully');
+        $user = $request->user();
+        if ($user->isTenant()) {
+            $user->load('tenant');
+        }
+        return $this->successResponse($user, 'User retrieved successfully');
     }
 
     public function updateProfile(Request $request)

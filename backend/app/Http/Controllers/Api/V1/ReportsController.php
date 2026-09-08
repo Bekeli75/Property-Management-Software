@@ -80,6 +80,39 @@ class ReportsController extends ApiController
                 'expiring_soon' => (clone $leaseQuery)->where('status', 'active')->whereBetween('end_date', [now(), now()->addDays(90)])->count(),
                 'expired' => (clone $leaseQuery)->where('status', 'expired')->count(),
             ],
+            'trends' => [
+                'collection' => $this->monthlyTrend(
+                    (clone $paymentQuery)->where('status', 'completed'),
+                    'payment_date'
+                ),
+                'expenses' => $this->monthlyTrend(
+                    (clone $expenseQuery)->where('status', 'paid'),
+                    'expense_date'
+                ),
+            ],
         ], 'Reports retrieved successfully');
+    }
+
+    /**
+     * Build a 6-month monthly totals series for a scoped query.
+     */
+    private function monthlyTrend($query, $column)
+    {
+        $months = [];
+        $now = now();
+
+        for ($i = 5; $i >= 0; $i--) {
+            $start = (clone $now)->subMonths($i)->startOfMonth();
+            $end = (clone $now)->subMonths($i)->endOfMonth();
+
+            $months[] = [
+                'month' => $start->format('M'),
+                'amount' => round((float) (clone $query)
+                    ->whereBetween($column, [$start, $end])
+                    ->sum('amount'), 2),
+            ];
+        }
+
+        return $months;
     }
 }

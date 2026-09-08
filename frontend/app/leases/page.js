@@ -1,122 +1,184 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/lib/api';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import FileUpload from '@/components/FileUpload';
 import AppShell from '@/components/AppShell';
+import AuthGuard from '@/components/AuthGuard';
+import PageHeader from '@/components/ui/PageHeader';
+import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
+import FormField from '@/components/ui/FormField';
+import EmptyState from '@/components/ui/EmptyState';
+import { SkeletonStat } from '@/components/ui/Skeleton';
+import {
+  FileText,
+  Plus,
+  User,
+  CalendarRange,
+  Banknote,
+  ArrowRight,
+  Trash2,
+  XCircle,
+} from 'lucide-react';
+
+const emptyForm = {
+  tenant_id: '',
+  property_id: '',
+  unit_id: '',
+  start_date: '',
+  end_date: '',
+  monthly_rent: '',
+  security_deposit: '',
+  payment_frequency: 'monthly',
+  payment_day: 1,
+  terms: '',
+  notes: '',
+};
+
+function formatDate(value) {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default function LeasesPage() {
-  const { user, isAuthenticated, isOwner, isManager, isAdmin, isTenant } = useAuth();
+  const { isAuthenticated, isOwner, isManager, isAdmin, isTenant } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [leases, setLeases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [tenants, setTenants] = useState([]);
+  const [properties, setProperties] = useState([]);
   const [units, setUnits] = useState([]);
-  const [formData, setFormData] = useState({
-    tenant_id: '',
-    unit_id: '',
-    start_date: '',
-    end_date: '',
-    monthly_rent: '',
-    security_deposit: '',
-    payment_frequency: 'monthly',
-    payment_day: 1,
-    terms: '',
-    notes: '',
-  });
+  const [attachments, setAttachments] = useState([]);
+  const [terminateLease, setTerminateLease] = useState(null);
+  const [terminationForm, setTerminationForm] = useState({ termination_reason: '', termination_effective_date: '' });
+  const [terminating, setTerminating] = useState(false);
+  const [formData, setFormData] = useState(emptyForm);
+
+  const canManage = !isTenant && (isOwner || isManager || isAdmin);
+
+  const fetchLeases = useCallback(async () => {
+    try {
+      const response = await apiClient.getLeases();
+      if (response.success) setLeases(response.data);
+    } catch (error) {
+      console.error('Failed to fetch leases:', error);
+      toast.error('Unable to load your leases.');
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  const fetchTenants = useCallback(async () => {
+    try {
+      const response = await apiClient.getTenants();
+      if (response.success) setTenants(response.data);
+    } catch (error) {
+      console.error('Failed to fetch tenants:', error);
+    }
+  }, []);
+
+  const fetchUnits = useCallback(async () => {
+    try {
+      const response = await apiClient.getUnits();
+      if (response.success) setUnits(response.data);
+    } catch (error) {
+      console.error('Failed to fetch units:', error);
+    }
+  }, []);
+
+  const fetchProperties = useCallback(async () => {
+    try {
+      const response = await apiClient.getProperties();
+      if (response.success) setProperties(response.data);
+    } catch (error) {
+      console.error('Failed to fetch properties:', error);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
-
-    fetchLeases();
-    fetchTenants();
-    fetchUnits();
-  }, [isAuthenticated, router]);
-
-  async function fetchLeases() {
-    try {
-      const response = await apiClient.getLeases();
-      if (response.success) {
-        setLeases(response.data);
+    const load = async () => {
+      await fetchLeases();
+      if (!isTenant) {
+        await fetchTenants();
+        await fetchUnits();
+        await fetchProperties();
       }
-    } catch (error) {
-      console.error('Failed to fetch leases:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
+    };
+    load();
+  }, [isAuthenticated, isTenant, router, fetchLeases, fetchTenants, fetchUnits, fetchProperties]);
 
-  async function fetchTenants() {
-    try {
-      const response = await apiClient.getTenants();
-      if (response.success) {
-        setTenants(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch tenants:', error);
-    }
-  }
-
-  async function fetchUnits() {
-    try {
-      const response = await apiClient.getUnits();
-      if (response.success) {
-        setUnits(response.data.filter(u => u.status === 'available'));
-      }
-    } catch (error) {
-      console.error('Failed to fetch units:', error);
-    }
-  }
+  const availableUnits = useMemo(() => {
+    const base = units.filter((u) => u.status === 'available');
+    if (!formData.property_id) return base;
+    return base.filter((u) => Number(u.property_id) === Number(formData.property_id));
+  }, [units, formData.property_id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
-      const response = await apiClient.createLease(formData);
-      if (response.success) {
-        setShowModal(false);
-        setFormData({
-          tenant_id: '',
-          unit_id: '',
-          start_date: '',
-          end_date: '',
-          monthly_rent: '',
-          security_deposit: '',
-          payment_frequency: 'monthly',
-          payment_day: 1,
-          terms: '',
-          notes: '',
+      let payload;
+      if (attachments.length) {
+        payload = new FormData();
+        Object.entries(formData).forEach(([key, value]) => {
+          if (value !== '' && value !== null && value !== undefined) payload.append(key, value);
         });
+        attachments.forEach((file) => payload.append('attachments[]', file));
+      } else {
+        payload = formData;
+      }
+
+      const response = await apiClient.createLease(payload);
+      if (response.success) {
+        toast.success('Lease created successfully.');
+        setShowModal(false);
+        setFormData(emptyForm);
+        setAttachments([]);
         fetchLeases();
-        fetchUnits(); // Refresh units to update status
+        fetchUnits();
+      } else {
+        toast.error(response.message || 'Unable to create the lease.');
       }
     } catch (error) {
       console.error('Failed to create lease:', error);
+      toast.error('Unable to create the lease.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleTerminate = async (id) => {
-    const reason = prompt('Please provide the reason for termination:');
-    if (!reason) return;
-
-    const effectiveDate = prompt('Effective date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-    if (!effectiveDate) return;
-
+  const handleTerminate = async (e) => {
+    e.preventDefault();
+    setTerminating(true);
     try {
-      await apiClient.terminateLease(id, {
-        termination_reason: reason,
-        termination_effective_date: effectiveDate,
-      });
-      fetchLeases();
+      const response = await apiClient.terminateLease(terminateLease.id, terminationForm);
+      if (response.success) {
+        toast.success('Termination request submitted.');
+        setTerminateLease(null);
+        setTerminationForm({ termination_reason: '', termination_effective_date: '' });
+        fetchLeases();
+      } else {
+        toast.error(response.message || 'Unable to submit the request.');
+      }
     } catch (error) {
       console.error('Failed to terminate lease:', error);
+      toast.error('Unable to submit the request.');
+    } finally {
+      setTerminating(false);
     }
   };
 
@@ -124,9 +186,11 @@ export default function LeasesPage() {
     setDeleting(true);
     try {
       await apiClient.deleteLease(id);
+      toast.success('Lease deleted.');
       fetchLeases();
     } catch (error) {
       console.error('Failed to delete lease:', error);
+      toast.error('Unable to delete the lease.');
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -135,314 +199,259 @@ export default function LeasesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <AppShell>
+        <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+          <PageHeader eyebrow="Management" title="Leases" description="Keep tenant agreements, rent terms, and attachments organized." />
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => <SkeletonStat key={i} />)}
+          </div>
+        </main>
+      </AppShell>
     );
   }
 
   return (
-    <AppShell>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
-            All Leases ({leases.length})
-          </h2>
-          {(isOwner || isAdmin) && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-            >
-              Create Lease
-            </button>
-          )}
-        </div>
+    <AuthGuard>
+      <AppShell>
+      <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+        <PageHeader
+          eyebrow={isTenant ? 'My account' : 'Management'}
+          title={isTenant ? 'My lease' : `All leases (${leases.length})`}
+          description={
+            isTenant
+              ? 'Review your rent, dates, and terms of your current agreement.'
+              : 'Keep tenant agreements, rent terms, and attachments organized.'
+          }
+          actions={
+            canManage && (
+              <button type="button" onClick={() => setShowModal(true)} className="btn btn-primary">
+                <Plus size={16} />
+                Create lease
+              </button>
+            )
+          }
+        />
 
         {leases.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-600">No leases found</p>
-            {(isOwner || isAdmin) && (
-              <button
-                onClick={() => setShowModal(true)}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-              >
-                Create Your First Lease
-              </button>
-            )}
+          <div className="mt-8">
+            <EmptyState
+              icon={FileText}
+              title="No leases yet"
+              description={canManage ? 'Create your first lease to link a tenant with a unit.' : 'No lease is linked to this account yet.'}
+              actionLabel={canManage ? 'Create your first lease' : undefined}
+              onAction={canManage ? () => setShowModal(true) : undefined}
+            />
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tenant
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Unit
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Period
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Monthly Rent
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {leases.map((lease) => (
-                  <tr key={lease.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {lease.tenant?.user?.name || 'Unknown'}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {lease.tenant?.user?.email || ''}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {lease.unit?.unit_number} - {lease.unit?.property?.name}
-                      </div>
-                      <div className="text-sm text-gray-500 capitalize">
-                        {lease.unit?.type}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {new Date(lease.start_date).toLocaleDateString()}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        to {new Date(lease.end_date).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        ETB {lease.monthly_rent?.toLocaleString()}
-                      </div>
-                      <div className="text-sm text-gray-500 capitalize">
-                        {lease.payment_frequency}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        lease.status === 'active' ? 'bg-green-100 text-green-800' :
-                        lease.status === 'expired' ? 'bg-gray-100 text-gray-800' :
-                        lease.status === 'terminated' ? 'bg-red-100 text-red-800' :
-                        lease.status === 'pending_termination' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {lease.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => router.push(`/leases/${lease.id}`)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
-                      >
-                        View
-                      </button>
-                      {lease.status === 'active' && (isOwner || isAdmin) && (
-                        <button
-                          onClick={() => handleTerminate(lease.id)}
-                          className="text-yellow-600 hover:text-yellow-900 mr-3"
-                        >
-                          Terminate
-                        </button>
-                      )}
-                      {(isOwner || isAdmin) && (
-                        <button
-                          onClick={() => setDeleteId(lease.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </td>
+          <div className="card mt-8 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-100">
+                <thead className="bg-slate-50/70">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Tenant</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Unit</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Period</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Monthly rent</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-50 bg-white">
+                  {leases.map((lease) => (
+                    <tr key={lease.id} className="premium-table-row">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <p className="text-sm font-semibold text-slate-900">{lease.tenant?.user?.name || 'Unknown'}</p>
+                        <p className="text-xs text-slate-500">{lease.tenant?.user?.email || ''}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <p className="text-sm text-slate-900">{lease.unit?.unit_number} — {lease.unit?.property?.name}</p>
+                        <p className="text-xs capitalize text-slate-500">{lease.unit?.type}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <p className="text-sm text-slate-900">{formatDate(lease.start_date)}</p>
+                        <p className="text-xs text-slate-500">to {formatDate(lease.end_date)}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <p className="text-sm font-semibold text-slate-900">ETB {Number(lease.monthly_rent || 0).toLocaleString()}</p>
+                        <p className="text-xs capitalize text-slate-500">{lease.payment_frequency}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Badge status={lease.status} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button type="button" onClick={() => router.push(`/leases/${lease.id}`)} className="inline-flex items-center gap-1 text-teal-700 hover:text-teal-900">
+                          View
+                          <ArrowRight size={14} />
+                        </button>
+                        {lease.status === 'active' && canManage && (
+                          <button type="button" onClick={() => setTerminateLease(lease)} className="ml-4 inline-flex items-center gap-1 text-amber-600 hover:text-amber-800">
+                            <XCircle size={14} />
+                            Terminate
+                          </button>
+                        )}
+                        {canManage && (
+                          <button type="button" onClick={() => setDeleteId(lease.id)} className="ml-4 inline-flex items-center gap-1 text-red-600 hover:text-red-900">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </main>
 
-      {/* Create Lease Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Lease</h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tenant *
-                  </label>
-                  <select
-                    required
-                    value={formData.tenant_id}
-                    onChange={(e) => setFormData({ ...formData, tenant_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select a tenant</option>
-                    {tenants.map((tenant) => (
-                      <option key={tenant.id} value={tenant.id}>
-                        {tenant.user?.name} ({tenant.user?.email})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unit *
-                  </label>
-                  <select
-                    required
-                    value={formData.unit_id}
-                    onChange={(e) => setFormData({ ...formData, unit_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select a unit</option>
-                    {units.map((unit) => (
-                      <option key={unit.id} value={unit.id}>
-                        {unit.unit_number} - {unit.property?.name} (ETB {unit.base_rent?.toLocaleString()}/month)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Start Date *
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.start_date}
-                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      End Date *
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.end_date}
-                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monthly Rent (ETB) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={formData.monthly_rent}
-                    onChange={(e) => setFormData({ ...formData, monthly_rent: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Security Deposit (ETB)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.security_deposit}
-                    onChange={(e) => setFormData({ ...formData, security_deposit: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Payment Frequency *
-                    </label>
-                    <select
-                      required
-                      value={formData.payment_frequency}
-                      onChange={(e) => setFormData({ ...formData, payment_frequency: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="monthly">Monthly</option>
-                      <option value="quarterly">Quarterly</option>
-                      <option value="semi_annual">Semi-Annual</option>
-                      <option value="annual">Annual</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Payment Day *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      max="31"
-                      value={formData.payment_day}
-                      onChange={(e) => setFormData({ ...formData, payment_day: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Terms
-                  </label>
-                  <textarea
-                    value={formData.terms}
-                    onChange={(e) => setFormData({ ...formData, terms: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                  >
-                    Create Lease
-                  </button>
-                </div>
-              </form>
+      {/* Create lease modal */}
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title="Create new lease"
+        description="Link a tenant to a unit and set the rental terms."
+        size="xl"
+        footer={
+          <>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary">Cancel</button>
+            <button type="submit" form="lease-form" disabled={saving} className="btn btn-primary">
+              {saving ? 'Creating...' : 'Create lease'}
+            </button>
+          </>
+        }
+      >
+        <form id="lease-form" onSubmit={handleSubmit} className="space-y-7">
+          {/* Tenant & property */}
+          <section>
+            <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <User size={15} className="text-teal-600" />
+              Tenant &amp; unit
+            </p>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FormField label="Tenant" required>
+                <select className="field-input" required value={formData.tenant_id} onChange={(e) => setFormData({ ...formData, tenant_id: e.target.value })}>
+                  <option value="">Select a tenant</option>
+                  {tenants.map((tenant) => (
+                    <option key={tenant.id} value={tenant.id}>{tenant.user?.name} ({tenant.user?.email})</option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Property">
+                <select className="field-input" value={formData.property_id} onChange={(e) => setFormData({ ...formData, property_id: e.target.value, unit_id: '' })}>
+                  <option value="">Filter units by property</option>
+                  {properties.map((property) => (
+                    <option key={property.id} value={property.id}>{property.name}</option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Unit" required>
+                <select className="field-input" required value={formData.unit_id} onChange={(e) => setFormData({ ...formData, unit_id: e.target.value })}>
+                  <option value="">Select an available unit</option>
+                  {availableUnits.map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {unit.unit_number} — {unit.property?.name} (ETB {Number(unit.base_rent || 0).toLocaleString()}/mo)
+                    </option>
+                  ))}
+                </select>
+              </FormField>
             </div>
-          </div>
-        </div>
-      )}
+          </section>
+
+          {/* Dates */}
+          <section>
+            <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <CalendarRange size={15} className="text-teal-600" />
+              Lease period
+            </p>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FormField label="Start date" required>
+                <input type="date" className="field-input" required value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
+              </FormField>
+              <FormField label="End date" required hint="Lease becomes active at midnight on the start date.">
+                <input type="date" className="field-input" required value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
+              </FormField>
+            </div>
+          </section>
+
+          {/* Rent */}
+          <section>
+            <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <Banknote size={15} className="text-teal-600" />
+              Rent &amp; deposit
+            </p>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FormField label="Monthly rent (ETB)" required>
+                <input type="number" min="0" step="0.01" required className="field-input" value={formData.monthly_rent} onChange={(e) => setFormData({ ...formData, monthly_rent: parseFloat(e.target.value) })} placeholder="e.g. 25000" />
+              </FormField>
+              <FormField label="Security deposit (ETB)">
+                <input type="number" min="0" step="0.01" className="field-input" value={formData.security_deposit} onChange={(e) => setFormData({ ...formData, security_deposit: parseFloat(e.target.value) })} placeholder="e.g. 25000" />
+              </FormField>
+              <FormField label="Payment frequency" required>
+                <select className="field-input" required value={formData.payment_frequency} onChange={(e) => setFormData({ ...formData, payment_frequency: e.target.value })}>
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="semi_annual">Semi-annual</option>
+                  <option value="annual">Annual</option>
+                </select>
+              </FormField>
+              <FormField label="Payment day" required hint="Day of the month rent is due.">
+                <input type="number" min="1" max="31" required className="field-input" value={formData.payment_day} onChange={(e) => setFormData({ ...formData, payment_day: parseInt(e.target.value) || 1 })} />
+              </FormField>
+            </div>
+          </section>
+
+          {/* Terms */}
+          <section>
+            <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <FileText size={15} className="text-teal-600" />
+              Terms &amp; attachments
+            </p>
+            <div className="grid gap-5">
+              <FormField label="Terms" hint="Conditions, house rules, or renewal terms.">
+                <textarea className="field-input resize-none" rows={3} value={formData.terms} onChange={(e) => setFormData({ ...formData, terms: e.target.value })} placeholder="e.g. No subletting, quiet hours after 10 PM" />
+              </FormField>
+              <FormField label="Notes">
+                <textarea className="field-input resize-none" rows={2} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Add renewal terms, special conditions, or internal notes." />
+              </FormField>
+              <FileUpload
+                id="lease-attachments"
+                label="Attachments"
+                hint="Signed lease PDF or ID photos, up to 10 MB each."
+                accept={['pdf', 'jpg', 'jpeg', 'png', 'webp']}
+                maxSizeMB={10}
+                files={attachments}
+                onChange={setAttachments}
+              />
+            </div>
+          </section>
+        </form>
+      </Modal>
+
+      {/* Termination modal */}
+      <Modal
+        open={terminateLease !== null}
+        onClose={() => { setTerminateLease(null); setTerminationForm({ termination_reason: '', termination_effective_date: '' }); }}
+        title="Request lease termination"
+        description={terminateLease ? `Terminating the lease for ${terminateLease.tenant?.user?.name || 'this tenant'} on ${terminateLease.unit?.unit_number || 'this unit'}.` : ''}
+        footer={
+          <>
+            <button type="button" onClick={() => setTerminateLease(null)} className="btn btn-secondary">Cancel</button>
+            <button type="submit" form="terminate-form" disabled={terminating} className="btn btn-danger">
+              {terminating ? 'Submitting...' : 'Submit request'}
+            </button>
+          </>
+        }
+      >
+        <form id="terminate-form" onSubmit={handleTerminate} className="space-y-5">
+          <FormField label="Reason for termination" required>
+            <textarea className="field-input resize-none" rows={3} required value={terminationForm.termination_reason} onChange={(e) => setTerminationForm({ ...terminationForm, termination_reason: e.target.value })} placeholder="Explain why this lease is ending" />
+          </FormField>
+          <FormField label="Effective date" required>
+            <input type="date" className="field-input" required min={new Date().toISOString().split('T')[0]} value={terminationForm.termination_effective_date} onChange={(e) => setTerminationForm({ ...terminationForm, termination_effective_date: e.target.value })} />
+          </FormField>
+        </form>
+      </Modal>
+
       <ConfirmDialog
         open={deleteId !== null}
         title="Delete lease?"
@@ -452,5 +461,6 @@ export default function LeasesPage() {
         loading={deleting}
       />
     </AppShell>
+    </AuthGuard>
   );
 }

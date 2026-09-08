@@ -1,145 +1,217 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/lib/api';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import FileUpload from '@/components/FileUpload';
 import AppShell from '@/components/AppShell';
+import AuthGuard from '@/components/AuthGuard';
+import PageHeader from '@/components/ui/PageHeader';
+import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
+import FormField from '@/components/ui/FormField';
+import EmptyState from '@/components/ui/EmptyState';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import { imageUrl } from '@/components/PropertyImageFields';
+import { Wrench, Plus, Camera, MapPin, CalendarClock, ArrowRight, Trash2, UserCheck, CheckCircle } from 'lucide-react';
+
+const emptyForm = {
+  property_id: '',
+  unit_id: '',
+  tenant_id: '',
+  title: '',
+  description: '',
+  priority: 'medium',
+  category: 'other',
+};
+
+function formatDate(value) {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default function MaintenancePage() {
-  const { user, isAuthenticated, isOwner, isManager, isAdmin, isTenant } = useAuth();
+  const { user, isAuthenticated, isOwner, isAdmin, isTenant } = useAuth();
   const router = useRouter();
-  const [maintenanceRequests, setMaintenanceRequests] = useState([]);
+  const toast = useToast();
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [properties, setProperties] = useState([]);
   const [units, setUnits] = useState([]);
   const [tenants, setTenants] = useState([]);
-  const [formData, setFormData] = useState({
-    property_id: '',
-    unit_id: '',
-    tenant_id: '',
-    title: '',
-    description: '',
-    priority: 'medium',
-    category: 'other',
-  });
+  const [photos, setPhotos] = useState([]);
+  const [formData, setFormData] = useState(emptyForm);
+  const [assigning, setAssigning] = useState(null);
+  const [assignForm, setAssignForm] = useState({ assigned_to: '', scheduled_date: '' });
+  const [assigningLoading, setAssigningLoading] = useState(false);
+  const [completing, setCompleting] = useState(null);
+  const [completeForm, setCompleteForm] = useState({ actual_cost: '', notes: '' });
+  const [completingLoading, setCompletingLoading] = useState(false);
+
+  const isStaff = !isTenant;
+
+  const fetchRequests = useCallback(async () => {
+    try {
+      const response = await apiClient.getMaintenanceRequests();
+      if (response.success) setRequests(response.data);
+    } catch (error) {
+      console.error('Failed to fetch maintenance requests:', error);
+      toast.error('Unable to load maintenance requests.');
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  const fetchProperties = useCallback(async () => {
+    try {
+      const response = await apiClient.getProperties();
+      if (response.success) setProperties(response.data);
+    } catch (error) {
+      console.error('Failed to fetch properties:', error);
+    }
+  }, []);
+
+  const fetchTenants = useCallback(async () => {
+    try {
+      const response = await apiClient.getTenants();
+      if (response.success) setTenants(response.data);
+    } catch (error) {
+      console.error('Failed to fetch tenants:', error);
+    }
+  }, []);
+
+  const fetchUnits = useCallback(async (propertyId) => {
+    try {
+      const response = await apiClient.getUnitsByProperty(propertyId);
+      if (response.success) setUnits(response.data);
+    } catch (error) {
+      console.error('Failed to fetch units:', error);
+    }
+  }, []);
+
+  const fetchUnitsForTenant = useCallback(async () => {
+    try {
+      const response = await apiClient.getUnits();
+      if (response.success) {
+        const tenantId = user?.tenant?.id;
+        const tenantUnits = (response.data || []).filter(
+          (u) => u.activeLease?.tenant_id === tenantId
+        );
+        setUnits(tenantUnits);
+      }
+    } catch (error) {
+      console.error('Failed to fetch units:', error);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
-
-    fetchMaintenanceRequests();
-    fetchProperties();
-    fetchTenants();
-  }, [isAuthenticated, router]);
-
-  async function fetchMaintenanceRequests() {
-    try {
-      const response = await apiClient.getMaintenanceRequests();
-      if (response.success) {
-        setMaintenanceRequests(response.data);
+    const load = async () => {
+      await fetchRequests();
+      if (isStaff) {
+        await fetchProperties();
+        await fetchTenants();
+      } else if (isTenant) {
+        await fetchUnitsForTenant();
       }
-    } catch (error) {
-      console.error('Failed to fetch maintenance requests:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchProperties() {
-    try {
-      const response = await apiClient.getProperties();
-      if (response.success) {
-        setProperties(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch properties:', error);
-    }
-  }
-
-  async function fetchTenants() {
-    try {
-      const response = await apiClient.getTenants();
-      if (response.success) {
-        setTenants(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch tenants:', error);
-    }
-  }
-
-  const fetchUnits = async (propertyId) => {
-    try {
-      const response = await apiClient.getUnitsByProperty(propertyId);
-      if (response.success) {
-        setUnits(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch units:', error);
-    }
-  };
+    };
+    load();
+  }, [isAuthenticated, isStaff, isTenant, router, fetchRequests, fetchProperties, fetchTenants, fetchUnitsForTenant]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
-      const response = await apiClient.createMaintenanceRequest(formData);
-      if (response.success) {
-        setShowModal(false);
-        setFormData({
-          property_id: '',
-          unit_id: '',
-          tenant_id: '',
-          title: '',
-          description: '',
-          priority: 'medium',
-          category: 'other',
+      let payload;
+      if (isTenant) {
+        if (!formData.unit_id) {
+          toast.error('Please select a unit.');
+          setSaving(false);
+          return;
+        }
+        payload = { ...formData, property_id: formData.property_id || undefined, tenant_id: undefined };
+        delete payload.tenant_id;
+        payload = Object.fromEntries(Object.entries(payload).filter(([, v]) => v));
+      } else if (photos.length) {
+        payload = new FormData();
+        Object.entries(formData).forEach(([key, value]) => {
+          if (value !== '' && value !== null && value !== undefined) payload.append(key, value);
         });
-        fetchMaintenanceRequests();
+        photos.forEach((file) => payload.append('photos[]', file));
+      } else {
+        payload = formData;
+      }
+
+      const response = await apiClient.createMaintenanceRequest(payload);
+      if (response.success) {
+        toast.success('Maintenance request created.');
+        setShowModal(false);
+        setFormData(emptyForm);
+        setPhotos([]);
+        fetchRequests();
+      } else {
+        toast.error(response.message || 'Unable to create the request.');
       }
     } catch (error) {
       console.error('Failed to create maintenance request:', error);
+      toast.error('Unable to create the request.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleAssign = async (id) => {
-    const assignedTo = prompt('Enter assigned person:');
-    if (!assignedTo) return;
-
-    const scheduledDate = prompt('Scheduled date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
-    if (!scheduledDate) return;
-
+  const handleAssign = async (e) => {
+    e.preventDefault();
+    setAssigningLoading(true);
     try {
-      await apiClient.assignMaintenanceRequest(id, {
-        assigned_to: assignedTo,
-        scheduled_date: scheduledDate,
-      });
-      fetchMaintenanceRequests();
+      const response = await apiClient.assignMaintenanceRequest(assigning.id, assignForm);
+      if (response.success) {
+        toast.success('Request assigned.');
+        setAssigning(null);
+        setAssignForm({ assigned_to: '', scheduled_date: '' });
+        fetchRequests();
+      } else {
+        toast.error(response.message || 'Unable to assign the request.');
+      }
     } catch (error) {
-      console.error('Failed to assign maintenance request:', error);
+      console.error('Failed to assign request:', error);
+      toast.error('Unable to assign the request.');
+    } finally {
+      setAssigningLoading(false);
     }
   };
 
-  const handleComplete = async (id) => {
-    const actualCost = prompt('Enter actual cost (ETB):');
-    if (actualCost === null) return;
-
-    const notes = prompt('Enter completion notes:');
-    if (notes === null) return;
-
+  const handleComplete = async (e) => {
+    e.preventDefault();
+    setCompletingLoading(true);
     try {
-      await apiClient.completeMaintenanceRequest(id, {
-        actual_cost: parseFloat(actualCost) || null,
-        notes: notes || '',
+      const response = await apiClient.completeMaintenanceRequest(completing.id, {
+        actual_cost: completeForm.actual_cost === '' ? null : parseFloat(completeForm.actual_cost),
+        notes: completeForm.notes || '',
       });
-      fetchMaintenanceRequests();
+      if (response.success) {
+        toast.success('Request completed.');
+        setCompleting(null);
+        setCompleteForm({ actual_cost: '', notes: '' });
+        fetchRequests();
+      } else {
+        toast.error(response.message || 'Unable to complete the request.');
+      }
     } catch (error) {
-      console.error('Failed to complete maintenance request:', error);
+      console.error('Failed to complete request:', error);
+      toast.error('Unable to complete the request.');
+    } finally {
+      setCompletingLoading(false);
     }
   };
 
@@ -147,9 +219,11 @@ export default function MaintenancePage() {
     setDeleting(true);
     try {
       await apiClient.deleteMaintenanceRequest(id);
-      fetchMaintenanceRequests();
+      toast.success('Request deleted.');
+      fetchRequests();
     } catch (error) {
-      console.error('Failed to delete maintenance request:', error);
+      console.error('Failed to delete request:', error);
+      toast.error('Unable to delete the request.');
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -158,271 +232,286 @@ export default function MaintenancePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <AppShell>
+        <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+          <PageHeader eyebrow="Operations" title="Maintenance" description="Track repair requests, assignments, and completion." />
+          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        </main>
+      </AppShell>
     );
   }
 
   return (
-    <AppShell>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Maintenance Requests ({maintenanceRequests.length})
-          </h2>
-          <button
-            onClick={() => setShowModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-          >
-            Create Request
-          </button>
-        </div>
-
-        {maintenanceRequests.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-600">No maintenance requests found</p>
-            <button
-              onClick={() => setShowModal(true)}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-            >
-              Create Your First Request
+    <AuthGuard>
+      <AppShell>
+      <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+        <PageHeader
+          eyebrow="Operations"
+          title={`Maintenance (${requests.length})`}
+          description={isTenant ? 'Report issues and track their progress from request to completion.' : 'Track repair requests, assignments, and completion.'}
+          actions={
+            <button type="button" onClick={() => setShowModal(true)} className="btn btn-primary">
+              <Plus size={16} />
+              New request
             </button>
+          }
+        />
+
+        {requests.length === 0 ? (
+          <div className="mt-8">
+            <EmptyState
+              icon={Wrench}
+              title="No maintenance requests"
+              description="Create a request when something needs attention in a property."
+              actionLabel="Create your first request"
+              onAction={() => setShowModal(true)}
+            />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {maintenanceRequests.map((request) => (
-              <div key={request.id} className="bg-white rounded-lg shadow hover:shadow-lg transition">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900">{request.title}</h3>
-                    <div className="flex gap-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        request.priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                        request.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                        request.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {request.priority}
-                      </span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        request.status === 'completed' ? 'bg-green-100 text-green-800' :
-                        request.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                        request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {request.status}
-                      </span>
+          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {requests.map((request) => {
+              const coverPhoto = request.photos?.[0];
+              return (
+                <article key={request.id} className="card overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lg">
+                  <button type="button" onClick={() => router.push(`/maintenance/${request.id}`)} className="block w-full text-left" aria-label={`View ${request.title}`}>
+                    {coverPhoto ? (
+                      <div className="relative h-36 w-full">
+                        <img src={imageUrl(coverPhoto.file_path)} alt="" className="h-full w-full object-cover" />
+                        <span className="absolute left-3 top-3"><Badge status={request.status} /></span>
+                      </div>
+                    ) : (
+                      <div className="property-card-banner flex h-36 items-center justify-center">
+                        <Camera size={36} strokeWidth={1.25} className="text-white/30" />
+                        <span className="absolute left-3 top-3"><Badge status={request.status} className="bg-white/90 text-slate-700" /></span>
+                      </div>
+                    )}
+                  </button>
+
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="truncate text-base font-semibold text-slate-950">{request.title}</h3>
+                      <Badge status={request.priority} />
+                    </div>
+                    <p className="mt-1.5 line-clamp-2 text-sm leading-5 text-slate-500">{request.description}</p>
+
+                    <dl className="mt-4 space-y-1.5 border-t border-slate-100 pt-4 text-xs">
+                      <div className="flex items-center gap-1.5 text-slate-500">
+                        <MapPin size={12} className="shrink-0 text-slate-400" />
+                        <span className="truncate">{request.property?.name} · {request.unit?.unit_number}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-slate-500">
+                        <CalendarClock size={12} className="shrink-0 text-slate-400" />
+                        <span>Requested {formatDate(request.requested_date)}</span>
+                      </div>
+                      {request.assigned_to && (
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <UserCheck size={12} className="shrink-0 text-slate-400" />
+                          <span>Assigned to {request.assigned_to}</span>
+                        </div>
+                      )}
+                      {request.actual_cost != null && (
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                          <CheckCircle size={12} className="shrink-0 text-emerald-500" />
+                          <span>Cost ETB {Number(request.actual_cost).toLocaleString()}</span>
+                        </div>
+                      )}
+                    </dl>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button type="button" onClick={() => router.push(`/maintenance/${request.id}`)} className="btn btn-secondary flex-1 py-2 text-xs">
+                        View details
+                        <ArrowRight size={14} />
+                      </button>
+                      {request.status === 'pending' && isStaff && (
+                        <button type="button" onClick={() => setAssigning(request)} className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-700 transition hover:bg-teal-100">
+                          Assign
+                        </button>
+                      )}
+                      {request.status === 'in_progress' && isStaff && (
+                        <button type="button" onClick={() => setCompleting(request)} className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">
+                          Complete
+                        </button>
+                      )}
+                      {(isOwner || isAdmin) && (
+                        <button type="button" onClick={() => setDeleteId(request.id)} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100" aria-label="Delete request">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{request.description}</p>
-                  <div className="space-y-2 text-sm">
-                    <p className="text-gray-600">
-                      <span className="font-medium">Property:</span> {request.property?.name}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Unit:</span> {request.unit?.unit_number}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Category:</span> {request.category}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Requested:</span> {new Date(request.requested_date).toLocaleDateString()}
-                    </p>
-                    {request.assigned_to && (
-                      <p className="text-gray-600">
-                        <span className="font-medium">Assigned to:</span> {request.assigned_to}
-                      </p>
-                    )}
-                    {request.estimated_cost && (
-                      <p className="text-gray-600">
-                        <span className="font-medium">Est. Cost:</span> ETB {request.estimated_cost?.toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={() => router.push(`/maintenance/${request.id}`)}
-                      className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition text-sm"
-                    >
-                      View Details
-                    </button>
-                    {request.status === 'pending' && (isOwner || isManager || isAdmin) && (
-                      <button
-                        onClick={() => handleAssign(request.id)}
-                        className="px-3 py-2 bg-green-50 text-green-600 rounded-md hover:bg-green-100 transition text-sm"
-                      >
-                        Assign
-                      </button>
-                    )}
-                    {request.status === 'in_progress' && (isOwner || isManager || isAdmin) && (
-                      <button
-                        onClick={() => handleComplete(request.id)}
-                        className="px-3 py-2 bg-teal-50 text-teal-600 rounded-md hover:bg-teal-100 transition text-sm"
-                      >
-                        Complete
-                      </button>
-                    )}
-                    {(isOwner || isAdmin) && (
-                      <button
-                        onClick={() => setDeleteId(request.id)}
-                        className="px-3 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition text-sm"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </main>
 
-      {/* Create Maintenance Request Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Maintenance Request</h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Property *
-                  </label>
+      {/* Create request modal */}
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title="New maintenance request"
+        description="Describe the issue and where it is located."
+        size="xl"
+        footer={
+          <>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary">Cancel</button>
+            <button type="submit" form="maintenance-form" disabled={saving} className="btn btn-primary">
+              {saving ? 'Creating...' : 'Create request'}
+            </button>
+          </>
+        }
+      >
+        <form id="maintenance-form" onSubmit={handleSubmit} className="space-y-5">
+          {isStaff ? (
+            <>
+              <div className="grid gap-5 sm:grid-cols-3">
+                <FormField label="Property" required>
                   <select
+                    className="field-input"
                     required
                     value={formData.property_id}
                     onChange={(e) => {
                       setFormData({ ...formData, property_id: e.target.value, unit_id: '' });
                       fetchUnits(e.target.value);
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select a property</option>
                     {properties.map((property) => (
-                      <option key={property.id} value={property.id}>
-                        {property.name}
-                      </option>
+                      <option key={property.id} value={property.id}>{property.name}</option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unit *
-                  </label>
+                </FormField>
+                <FormField label="Unit" required>
                   <select
+                    className="field-input"
                     required
                     value={formData.unit_id}
                     onChange={(e) => setFormData({ ...formData, unit_id: e.target.value })}
                     disabled={!formData.property_id}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                   >
                     <option value="">Select a unit</option>
                     {units.map((unit) => (
-                      <option key={unit.id} value={unit.id}>
-                        {unit.unit_number} - {unit.type}
-                      </option>
+                      <option key={unit.id} value={unit.id}>{unit.unit_number} — {unit.type}</option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tenant
-                  </label>
-                  <select
-                    value={formData.tenant_id}
-                    onChange={(e) => setFormData({ ...formData, tenant_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
+                </FormField>
+                <FormField label="Tenant">
+                  <select className="field-input" value={formData.tenant_id} onChange={(e) => setFormData({ ...formData, tenant_id: e.target.value })}>
                     <option value="">Select a tenant (optional)</option>
                     {tenants.map((tenant) => (
-                      <option key={tenant.id} value={tenant.id}>
-                        {tenant.user?.name}
-                      </option>
+                      <option key={tenant.id} value={tenant.id}>{tenant.user?.name}</option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description *
-                  </label>
-                  <textarea
-                    required
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Priority *
-                    </label>
-                    <select
-                      required
-                      value={formData.priority}
-                      onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category *
-                    </label>
-                    <select
-                      required
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="plumbing">Plumbing</option>
-                      <option value="electrical">Electrical</option>
-                      <option value="structural">Structural</option>
-                      <option value="hvac">HVAC</option>
-                      <option value="appliances">Appliances</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                  >
-                    Create Request
-                  </button>
-                </div>
-              </form>
-            </div>
+                </FormField>
+              </div>
+            </>
+          ) : (
+            <FormField label="Unit" required hint="Choose the unit where the issue is located.">
+              <select className="field-input" required value={formData.unit_id} onChange={(e) => setFormData({ ...formData, unit_id: e.target.value })}>
+                <option value="">Select your unit</option>
+                {units.map((unit) => (
+                  <option key={unit.id} value={unit.id}>{unit.unit_number} — {unit.property?.name}</option>
+                ))}
+              </select>
+            </FormField>
+          )}
+
+          <FormField label="Title" required>
+            <input className="field-input" required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="e.g. Water heater not heating" />
+          </FormField>
+
+          <FormField label="Description" required>
+            <textarea className="field-input resize-none" rows={3} required value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Describe the issue, location and urgency" />
+          </FormField>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField label="Priority" required>
+              <select className="field-input" required value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </FormField>
+            <FormField label="Category" required>
+              <select className="field-input" required value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })}>
+                <option value="plumbing">Plumbing</option>
+                <option value="electrical">Electrical</option>
+                <option value="structural">Structural</option>
+                <option value="hvac">HVAC</option>
+                <option value="appliances">Appliances</option>
+                <option value="other">Other</option>
+              </select>
+            </FormField>
           </div>
-        </div>
-      )}
+
+          {isStaff && (
+            <FileUpload
+              id="maintenance-photos"
+              label="Photos"
+              hint="Add up to 5 photos of the issue (JPG, PNG, or WEBP up to 5 MB)."
+              accept={['jpg', 'jpeg', 'png', 'webp']}
+              maxSizeMB={5}
+              files={photos}
+              onChange={setPhotos}
+            />
+          )}
+        </form>
+      </Modal>
+
+      {/* Assign modal */}
+      <Modal
+        open={assigning !== null}
+        onClose={() => setAssigning(null)}
+        title="Assign request"
+        description={assigning ? `Assign "${assigning.title}" to a technician or team member.` : ''}
+        footer={
+          <>
+            <button type="button" onClick={() => setAssigning(null)} className="btn btn-secondary">Cancel</button>
+            <button type="submit" form="assign-form" disabled={assigningLoading} className="btn btn-primary">
+              {assigningLoading ? 'Assigning...' : 'Assign request'}
+            </button>
+          </>
+        }
+      >
+        <form id="assign-form" onSubmit={handleAssign} className="space-y-5">
+          <FormField label="Assigned person" required hint="Name or role of the person picking this up.">
+            <input className="field-input" required value={assignForm.assigned_to} onChange={(e) => setAssignForm({ ...assignForm, assigned_to: e.target.value })} placeholder="e.g. Mekonnen Worku" />
+          </FormField>
+          <FormField label="Scheduled date">
+            <input type="date" className="field-input" value={assignForm.scheduled_date} onChange={(e) => setAssignForm({ ...assignForm, scheduled_date: e.target.value })} />
+          </FormField>
+        </form>
+      </Modal>
+
+      {/* Complete modal */}
+      <Modal
+        open={completing !== null}
+        onClose={() => setCompleting(null)}
+        title="Complete request"
+        description={completing ? `Mark "${completing.title}" as completed.` : ''}
+        footer={
+          <>
+            <button type="button" onClick={() => setCompleting(null)} className="btn btn-secondary">Cancel</button>
+            <button type="submit" form="complete-form" disabled={completingLoading} className="btn btn-primary">
+              {completingLoading ? 'Completing...' : 'Complete request'}
+            </button>
+          </>
+        }
+      >
+        <form id="complete-form" onSubmit={handleComplete} className="space-y-5">
+          <FormField label="Actual cost (ETB)">
+            <input type="number" min="0" step="0.01" className="field-input" value={completeForm.actual_cost} onChange={(e) => setCompleteForm({ ...completeForm, actual_cost: e.target.value })} placeholder="e.g. 3500" />
+          </FormField>
+          <FormField label="Completion notes">
+            <textarea className="field-input resize-none" rows={3} value={completeForm.notes} onChange={(e) => setCompleteForm({ ...completeForm, notes: e.target.value })} placeholder="What was fixed and any follow-up needed" />
+          </FormField>
+        </form>
+      </Modal>
+
       <ConfirmDialog
         open={deleteId !== null}
         title="Delete maintenance request?"
@@ -432,5 +521,6 @@ export default function MaintenancePage() {
         loading={deleting}
       />
     </AppShell>
+    </AuthGuard>
   );
 }

@@ -1,96 +1,109 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/lib/api';
-import ConfirmDialog from '@/components/ConfirmDialog';
 import AppShell from '@/components/AppShell';
+import AuthGuard from '@/components/AuthGuard';
+import PageHeader from '@/components/ui/PageHeader';
+import Badge from '@/components/ui/Badge';
+import EmptyState from '@/components/ui/EmptyState';
+import Modal from '@/components/ui/Modal';
+import FormField from '@/components/ui/FormField';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import { Users, UserPlus, Trash2, ChevronRight, ShieldCheck } from 'lucide-react';
+
+const emptyForm = {
+  user_id: '',
+  id_number: '',
+  id_type: 'national_id',
+  date_of_birth: '',
+  emergency_contact_name: '',
+  emergency_contact_phone: '',
+  employment_status: '',
+  employer_name: '',
+  monthly_income: '',
+  notes: '',
+};
+
+function formatDate(value) {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default function TenantsPage() {
-  const { user, isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
+  const { isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [users, setUsers] = useState([]);
-  const [formData, setFormData] = useState({
-    user_id: '',
-    id_number: '',
-    id_type: 'national_id',
-    date_of_birth: '',
-    emergency_contact_name: '',
-    emergency_contact_phone: '',
-    employment_status: '',
-    employer_name: '',
-    monthly_income: '',
-    notes: '',
-  });
+  const [formData, setFormData] = useState(emptyForm);
+
+  const canManage = isOwner || isAdmin;
+
+  const fetchTenants = useCallback(async () => {
+    try {
+      const response = await apiClient.getTenants();
+      if (response.success) setTenants(response.data);
+    } catch (error) {
+      console.error('Failed to fetch tenants:', error);
+      toast.error('Unable to load tenants.');
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await apiClient.getUsers('tenant');
+      if (response.success) setUsers(response.data);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
-
     if (!isOwner && !isManager && !isAdmin) {
       router.push('/dashboard');
       return;
     }
-
-    fetchTenants();
-    fetchUsers();
-  }, [isAuthenticated, isOwner, isManager, isAdmin, router]);
-
-  async function fetchTenants() {
-    try {
-      const response = await apiClient.getTenants();
-      if (response.success) {
-        setTenants(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch tenants:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchUsers() {
-    try {
-      // Get users with tenant role
-      const response = await apiClient.getUsers('tenant');
-      if (response.success) {
-        setUsers(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    }
-  }
+    const load = async () => {
+      await fetchTenants();
+      await fetchUsers();
+    };
+    load();
+  }, [isAuthenticated, isOwner, isManager, isAdmin, router, fetchTenants, fetchUsers]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const response = await apiClient.createTenant(formData);
       if (response.success) {
+        toast.success('Tenant profile created.');
         setShowModal(false);
-        setFormData({
-          user_id: '',
-          id_number: '',
-          id_type: 'national_id',
-          date_of_birth: '',
-          emergency_contact_name: '',
-          emergency_contact_phone: '',
-          employment_status: '',
-          employer_name: '',
-          monthly_income: '',
-          notes: '',
-        });
+        setFormData(emptyForm);
         fetchTenants();
+      } else {
+        toast.error(response.message || 'Unable to create tenant.');
       }
     } catch (error) {
       console.error('Failed to create tenant:', error);
+      toast.error('Unable to create tenant.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -98,9 +111,11 @@ export default function TenantsPage() {
     setDeleting(true);
     try {
       await apiClient.deleteTenant(id);
+      toast.success('Tenant removed.');
       fetchTenants();
     } catch (error) {
       console.error('Failed to delete tenant:', error);
+      toast.error('Unable to delete the tenant.');
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -109,300 +124,192 @@ export default function TenantsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <AppShell>
+        <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+          <PageHeader eyebrow="People" title="Tenants" description="Manage tenant profiles and lease associations." />
+          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        </main>
+      </AppShell>
     );
   }
 
   return (
-    <AppShell>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
-            All Tenants ({tenants.length})
-          </h2>
-          {(isOwner || isAdmin) && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-            >
-              Add Tenant
-            </button>
-          )}
-        </div>
+    <AuthGuard roles={['administrator', 'owner', 'manager']}>
+      <AppShell>
+      <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+        <PageHeader
+          eyebrow="People"
+          title={`Tenants (${tenants.length})`}
+          description="Tenant profiles linked to active and past leases."
+          actions={
+            canManage ? (
+              <button type="button" onClick={() => setShowModal(true)} className="btn btn-primary">
+                <UserPlus size={16} />
+                Add tenant
+              </button>
+            ) : undefined
+          }
+        />
 
         {tenants.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-600">No tenants found</p>
-            {(isOwner || isAdmin) && (
-              <button
-                onClick={() => setShowModal(true)}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-              >
-                Add Your First Tenant
-              </button>
-            )}
+          <div className="mt-8">
+            <EmptyState
+              icon={Users}
+              title="No tenants yet"
+              description="Tenant records are created when users register with the tenant role."
+              actionLabel={canManage ? 'Add tenant' : undefined}
+              onAction={canManage ? () => setShowModal(true) : undefined}
+            />
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ID Number
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contact
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Employment
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {tenants.map((tenant) => (
-                  <tr key={tenant.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {tenant.user?.name || 'Unknown'}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {tenant.user?.email || ''}
-                          </div>
-                        </div>
+          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {tenants.map((tenant) => {
+              const lease = tenant.activeLease;
+              const unit = lease?.unit;
+              const property = unit?.property;
+              return (
+                <button
+                  key={tenant.id}
+                  type="button"
+                  onClick={() => router.push(`/tenants/${tenant.id}`)}
+                  className="card flex w-full flex-col items-start gap-4 p-6 text-left transition hover:-translate-y-0.5 hover:shadow-lg"
+                >
+                  <div className="flex w-full items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700">
+                        <Users size={18} />
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{tenant.id_number}</div>
-                      <div className="text-sm text-gray-500">{tenant.id_type}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {tenant.emergency_contact_name || 'N/A'}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-950">{tenant.user?.name || 'Tenant'}</p>
+                        <p className="truncate text-xs text-slate-500">{tenant.user?.email || ''}</p>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {tenant.emergency_contact_phone || ''}
+                    </div>
+                    <Badge status={tenant.status || 'active'} />
+                  </div>
+
+                  <dl className="w-full space-y-2 border-t border-slate-100 pt-4 text-xs">
+                    {unit && (
+                      <div className="flex items-center justify-between text-slate-500">
+                        <span className="flex items-center gap-1.5"><ShieldCheck size={12} className="text-slate-400" /> Unit</span>
+                        <span className="font-medium text-slate-800">{unit.unit_number} · {property?.name || '—'}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 capitalize">
-                        {tenant.employment_status || 'N/A'}
+                    )}
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span>ID</span>
+                      <span className="font-medium text-slate-800">{tenant.id_number || '—'}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-slate-500">
+                      <span>Employment</span>
+                      <span className="font-medium capitalize text-slate-800">{tenant.employment_status?.replace('_', ' ') || '—'}</span>
+                    </div>
+                    {tenant.monthly_income && (
+                      <div className="flex items-center justify-between text-slate-500">
+                        <span>Income</span>
+                        <span className="font-medium text-slate-800">ETB {Number(tenant.monthly_income).toLocaleString()}</span>
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {tenant.employer_name || ''}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        tenant.status === 'active' ? 'bg-green-100 text-green-800' :
-                        tenant.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {tenant.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => router.push(`/tenants/${tenant.id}`)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
-                      >
-                        View
-                      </button>
-                      {(isOwner || isAdmin) && (
-                        <button
-                          onClick={() => setDeleteId(tenant.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                  </dl>
+
+                  <span className="btn btn-secondary mt-auto flex w-full items-center justify-center gap-1 py-2.5 text-xs">
+                    View profile
+                    <ChevronRight size={14} />
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
       </main>
 
       {/* Add Tenant Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Tenant</h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    User *
-                  </label>
-                  <select
-                    required
-                    value={formData.user_id}
-                    onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select a user</option>
-                    {users.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name} ({user.email})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ID Number *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.id_number}
-                    onChange={(e) => setFormData({ ...formData, id_number: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ID Type *
-                  </label>
-                  <select
-                    required
-                    value={formData.id_type}
-                    onChange={(e) => setFormData({ ...formData, id_type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="national_id">National ID</option>
-                    <option value="passport">Passport</option>
-                    <option value="driver_license">Driver&apos;s License</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.date_of_birth}
-                    onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Emergency Contact Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.emergency_contact_name}
-                      onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Emergency Contact Phone
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.emergency_contact_phone}
-                      onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Employment Status
-                  </label>
-                  <select
-                    value={formData.employment_status}
-                    onChange={(e) => setFormData({ ...formData, employment_status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select status</option>
-                    <option value="employed">Employed</option>
-                    <option value="self_employed">Self Employed</option>
-                    <option value="unemployed">Unemployed</option>
-                    <option value="student">Student</option>
-                    <option value="retired">Retired</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Employer Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.employer_name}
-                    onChange={(e) => setFormData({ ...formData, employer_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monthly Income (ETB)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.monthly_income}
-                    onChange={(e) => setFormData({ ...formData, monthly_income: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                  >
-                    Add Tenant
-                  </button>
-                </div>
-              </form>
-            </div>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title="Add new tenant"
+        description="Link a tenant user to their profile information."
+        size="lg"
+        footer={
+          <>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary">Cancel</button>
+            <button type="submit" form="tenant-form" disabled={saving} className="btn btn-primary">
+              {saving ? 'Creating...' : 'Create tenant'}
+            </button>
+          </>
+        }
+      >
+        <form id="tenant-form" onSubmit={handleSubmit} className="space-y-5">
+          <FormField label="Tenant user" required hint="Select a user already registered with the tenant role.">
+            <select className="field-input" required value={formData.user_id} onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}>
+              <option value="">Select a user</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+              ))}
+            </select>
+          </FormField>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField label="ID number" required>
+              <input className="field-input" required value={formData.id_number} onChange={(e) => setFormData({ ...formData, id_number: e.target.value })} placeholder="e.g. 1234567890" />
+            </FormField>
+            <FormField label="ID type" required>
+              <select className="field-input" required value={formData.id_type} onChange={(e) => setFormData({ ...formData, id_type: e.target.value })}>
+                <option value="national_id">National ID</option>
+                <option value="passport">Passport</option>
+                <option value="driver_license">Driver&apos;s License</option>
+                <option value="other">Other</option>
+              </select>
+            </FormField>
           </div>
-        </div>
-      )}
+
+          <FormField label="Date of birth">
+            <input type="date" className="field-input" value={formData.date_of_birth} onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })} />
+          </FormField>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormField label="Emergency contact name">
+              <input className="field-input" value={formData.emergency_contact_name} onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })} placeholder="e.g. Tata Mulugeta" />
+            </FormField>
+            <FormField label="Emergency contact phone">
+              <input className="field-input" value={formData.emergency_contact_phone} onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })} placeholder="e.g. +251911000000" />
+            </FormField>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-3">
+            <FormField label="Employment status">
+              <select className="field-input" value={formData.employment_status} onChange={(e) => setFormData({ ...formData, employment_status: e.target.value })}>
+                <option value="">Select status</option>
+                <option value="employed">Employed</option>
+                <option value="self_employed">Self Employed</option>
+                <option value="unemployed">Unemployed</option>
+                <option value="student">Student</option>
+                <option value="retired">Retired</option>
+              </select>
+            </FormField>
+            <FormField label="Employer name">
+              <input className="field-input" value={formData.employer_name} onChange={(e) => setFormData({ ...formData, employer_name: e.target.value })} placeholder="e.g. Ethiopian Airlines" />
+            </FormField>
+            <FormField label="Monthly income (ETB)">
+              <input type="number" min="0" className="field-input" value={formData.monthly_income} onChange={(e) => setFormData({ ...formData, monthly_income: e.target.value })} placeholder="e.g. 45000" />
+            </FormField>
+          </div>
+
+          <FormField label="Notes">
+            <textarea className="field-input resize-none" rows={2} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Additional notes" />
+          </FormField>
+        </form>
+      </Modal>
+
       <ConfirmDialog
         open={deleteId !== null}
-        title="Delete tenant?"
-        message="This will remove the tenant record from your workspace. This action cannot be undone."
+        title="Delete tenant record?"
+        message="This will remove the tenant record. The tenant user will no longer be associated with this workspace."
         onCancel={() => setDeleteId(null)}
         onConfirm={() => handleDelete(deleteId)}
         loading={deleting}
       />
     </AppShell>
+    </AuthGuard>
   );
 }

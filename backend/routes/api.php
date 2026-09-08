@@ -74,6 +74,7 @@ Route::prefix('v1')->group(function () {
         Route::get('reports', ReportsController::class);
 
         // Tenant portal
+        Route::get('tenant-portal/conversations', [TenantPortalController::class, 'conversations']);
         Route::get('tenant-portal/discussions', [TenantPortalController::class, 'discussions']);
         Route::post('tenant-portal/discussions', [TenantPortalController::class, 'createDiscussion']);
         Route::get('tenant-portal/notifications', [TenantPortalController::class, 'notifications']);

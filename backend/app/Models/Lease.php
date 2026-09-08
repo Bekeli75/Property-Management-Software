@@ -53,6 +53,11 @@ class Lease extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(LeaseAttachment::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');

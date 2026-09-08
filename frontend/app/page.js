@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import Logo from '@/components/Logo';
 
 export default function Home() {
   const { isAuthenticated, loading } = useAuth();
@@ -19,10 +20,13 @@ export default function Home() {
   }, [isAuthenticated, loading, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-teal-50">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading...</p>
+        <div className="flex justify-center">
+          <Logo size="lg" markOnly className="animate-pulse" />
+        </div>
+        <div className="mx-auto mt-6 h-10 w-10 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
+        <p className="mt-4 text-sm font-medium text-slate-500">Preparing your workspace…</p>
       </div>
     </div>
   );

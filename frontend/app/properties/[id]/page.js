@@ -2,23 +2,47 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import { useRouter, useParams } from 'next/navigation';
 import apiClient from '@/lib/api';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import PropertyImageFields from '@/components/PropertyImageFields';
+import PropertyImageFields, { imageUrl } from '@/components/PropertyImageFields';
 import AppShell from '@/components/AppShell';
+import AuthGuard from '@/components/AuthGuard';
+import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
+import FormField from '@/components/ui/FormField';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import {
+  Building2,
+  MapPin,
+  Ruler,
+  CalendarDays,
+  ArrowLeft,
+  ArrowRight,
+  LayoutGrid,
+  Pencil,
+  Trash2,
+  Home,
+  User as UserIcon,
+  ShieldCheck,
+} from 'lucide-react';
 
 export default function PropertyDetailPage() {
-  const { user, isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
+  const { isAuthenticated, isOwner, isAdmin } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const toast = useToast();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [imageFiles, setImageFiles] = useState({});
   const [editFormData, setEditFormData] = useState({});
+
+  const canManage = isOwner || isAdmin;
 
   const fetchProperty = useCallback(async () => {
     try {
@@ -40,12 +64,12 @@ export default function PropertyDetailPage() {
       router.push('/login');
       return;
     }
-
     void Promise.resolve().then(fetchProperty);
   }, [fetchProperty, isAuthenticated, router]);
 
   const handleUpdate = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const payload = new FormData();
       Object.entries(editFormData).forEach(([key, value]) => {
@@ -58,12 +82,18 @@ export default function PropertyDetailPage() {
       });
       const response = await apiClient.updateProperty(params.id, payload);
       if (response.success) {
+        toast.success('Property updated successfully.');
         setShowEditModal(false);
         setImageFiles({});
         fetchProperty();
+      } else {
+        toast.error(response.message || 'Unable to update the property.');
       }
     } catch (error) {
       console.error('Failed to update property:', error);
+      toast.error('Unable to update the property.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -71,9 +101,11 @@ export default function PropertyDetailPage() {
     setDeleting(true);
     try {
       await apiClient.deleteProperty(params.id);
+      toast.success('Property deleted.');
       router.push('/properties');
     } catch (error) {
       console.error('Failed to delete property:', error);
+      toast.error('Unable to delete the property.');
       setDeleting(false);
       setShowDeleteDialog(false);
     }
@@ -81,301 +113,249 @@ export default function PropertyDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <AppShell>
+        <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2"><SkeletonCard className="h-96" /></div>
+            <SkeletonCard className="h-64" />
+          </div>
+        </main>
+      </AppShell>
     );
   }
 
   if (!property) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Property not found</p>
-      </div>
+      <AppShell>
+        <main className="mx-auto max-w-[1500px] px-5 py-10 text-center">
+          <p className="text-sm text-slate-500">Property not found.</p>
+        </main>
+      </AppShell>
     );
   }
 
+  const cover = imageUrl(property.image_1);
+  const occupied = property.units?.filter((u) => u.status === 'occupied').length || 0;
+  const available = property.units?.filter((u) => u.status === 'available').length || 0;
+  const maintenanceCount = property.units?.filter((u) => u.status === 'maintenance').length || 0;
+
   return (
-    <AppShell>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Property Information */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Property Information</h2>
-                {(isOwner || isAdmin) && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowEditModal(true)}
-                      className="px-3 py-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => setShowDeleteDialog(true)}
-                      className="px-3 py-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition text-sm"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-600">Address</h3>
-                  <p className="text-gray-900">{property.address}</p>
-                  <p className="text-gray-900">{property.city}, {property.state} {property.postal_code}</p>
+    <AuthGuard roles={['administrator', 'owner', 'manager']}>
+      <AppShell>
+      <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+        <button type="button" onClick={() => router.push('/properties')} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-teal-700">
+          <ArrowLeft size={16} />
+          Back to properties
+        </button>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Main column */}
+          <div className="space-y-6 lg:col-span-2">
+            {/* Hero */}
+            <section className="card overflow-hidden">
+              {cover ? (
+                <img src={cover} alt={`${property.name} cover`} className="h-64 w-full object-cover" />
+              ) : (
+                <div className="property-card-banner flex h-64 items-center justify-center">
+                  <Building2 size={48} strokeWidth={1.25} className="text-white/30" />
                 </div>
-                
+              )}
+              <div className="p-6 sm:p-7">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <h1 className="text-2xl font-semibold tracking-tight text-slate-950">{property.name}</h1>
+                      <Badge status={property.status || 'active'} />
+                    </div>
+                    <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
+                      <MapPin size={14} className="text-slate-400" />
+                      {[property.address, property.city, property.state, property.postal_code].filter(Boolean).join(', ')}
+                    </p>
+                  </div>
+                  {canManage && (
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setShowEditModal(true)} className="btn btn-secondary px-3 py-2 text-xs">
+                        <Pencil size={14} />
+                        Edit
+                      </button>
+                      <button type="button" onClick={() => setShowDeleteDialog(true)} className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 {property.description && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-600">Description</h3>
-                    <p className="text-gray-900">{property.description}</p>
-                  </div>
+                  <p className="mt-5 text-sm leading-6 text-slate-600">{property.description}</p>
                 )}
-                
-                <div className="grid grid-cols-2 gap-4">
-                  {property.total_area && (
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-600">Total Area</h3>
-                      <p className="text-gray-900">{property.total_area} sq ft</p>
-                    </div>
-                  )}
-                  {property.year_built && (
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-600">Year Built</h3>
-                      <p className="text-gray-900">{property.year_built}</p>
-                    </div>
-                  )}
-                  {property.property_type && (
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-600">Property Type</h3>
-                      <p className="text-gray-900">{property.property_type}</p>
-                    </div>
-                  )}
+
+                <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-slate-100 pt-5 sm:grid-cols-4">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-600">Status</h3>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      property.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {property.status}
-                    </span>
+                    <dt className="flex items-center gap-1.5 text-xs text-slate-400"><Ruler size={13} /> Area</dt>
+                    <dd className="mt-1 text-sm font-semibold text-slate-900">{property.total_area ? `${property.total_area} sq ft` : '—'}</dd>
                   </div>
-                </div>
+                  <div>
+                    <dt className="flex items-center gap-1.5 text-xs text-slate-400"><CalendarDays size={13} /> Year built</dt>
+                    <dd className="mt-1 text-sm font-semibold text-slate-900">{property.year_built || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="flex items-center gap-1.5 text-xs text-slate-400"><Building2 size={13} /> Type</dt>
+                    <dd className="mt-1 text-sm font-semibold text-slate-900">{property.property_type || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="flex items-center gap-1.5 text-xs text-slate-400"><LayoutGrid size={13} /> Units</dt>
+                    <dd className="mt-1 text-sm font-semibold text-slate-900">{property.units?.length || 0}</dd>
+                  </div>
+                </dl>
               </div>
-            </div>
+            </section>
 
             {/* Units */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Units</h2>
-                <button
-                  onClick={() => router.push(`/properties/${property.id}/units`)}
-                  className="px-3 py-1 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition text-sm"
-                >
-                  Manage Units
+            <section className="card p-6 sm:p-7">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="page-eyebrow">Unit inventory</p>
+                  <h2 className="mt-1 text-lg font-semibold text-slate-950">Units</h2>
+                </div>
+                <button type="button" onClick={() => router.push(`/properties/${property.id}/units`)} className="btn btn-secondary px-3 py-2 text-xs">
+                  Manage units
+                  <ArrowRight size={14} />
                 </button>
               </div>
-              
-              {property.units && property.units.length > 0 ? (
-                <div className="space-y-3">
+
+              {property.units?.length ? (
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
                   {property.units.map((unit) => (
-                    <div key={unit.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <div key={unit.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-teal-300">
                       <div>
-                        <p className="font-medium">{unit.unit_number}</p>
-                        <p className="text-sm text-gray-600">{unit.type} - {unit.bedrooms} bed, {unit.bathrooms} bath</p>
+                        <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                          <Home size={14} className="text-teal-600" />
+                          {unit.unit_number}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">{unit.type} · {unit.bedrooms} bed · {unit.bathrooms} bath</p>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        unit.status === 'available' ? 'bg-green-100 text-green-800' :
-                        unit.status === 'occupied' ? 'bg-blue-100 text-blue-800' :
-                        unit.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {unit.status}
-                      </span>
+                      <Badge status={unit.status || 'available'} />
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-600">No units added yet</p>
+                <p className="mt-5 rounded-lg bg-slate-50 p-4 text-sm text-slate-500">No units added yet.</p>
               )}
-            </div>
+            </section>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h2>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Units</span>
-                  <span className="font-medium">{property.units?.length || 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Occupied</span>
-                  <span className="font-medium text-green-600">
-                    {property.units?.filter(u => u.status === 'occupied').length || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Available</span>
-                  <span className="font-medium text-blue-600">
-                    {property.units?.filter(u => u.status === 'available').length || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Maintenance</span>
-                  <span className="font-medium text-yellow-600">
-                    {property.units?.filter(u => u.status === 'maintenance').length || 0}
-                  </span>
-                </div>
-              </div>
-            </div>
+            <section className="card p-6">
+              <p className="page-eyebrow">Snapshot</p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950">Quick stats</h2>
+              <dl className="mt-5 space-y-3">
+                <Stat row="Total units" value={property.units?.length || 0} />
+                <Stat row="Occupied" value={occupied} tone="emerald" />
+                <Stat row="Available" value={available} tone="blue" />
+                <Stat row="In maintenance" value={maintenanceCount} tone="amber" />
+              </dl>
+            </section>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Owner</h2>
-              {property.owner && (
-                <div>
-                  <p className="font-medium">{property.owner.name}</p>
-                  <p className="text-sm text-gray-600">{property.owner.email}</p>
+            <section className="card p-6">
+              <p className="page-eyebrow">Accountability</p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-950">Ownership</h2>
+              {property.owner ? (
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100 text-teal-700">
+                    <UserIcon size={18} />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{property.owner.name}</p>
+                    <p className="text-xs text-slate-500">{property.owner.email}</p>
+                  </div>
                 </div>
+              ) : (
+                <p className="mt-4 text-sm text-slate-500">No owner assigned.</p>
               )}
-            </div>
 
-            {property.managers && property.managers.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Assigned Managers</h2>
-                <div className="space-y-2">
-                  {property.managers.map((manager) => (
-                    <div key={manager.id}>
-                      <p className="font-medium">{manager.name}</p>
-                      <p className="text-sm text-gray-600">{manager.email}</p>
-                    </div>
-                  ))}
+              {property.managers?.length ? (
+                <div className="mt-5 border-t border-slate-100 pt-4">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    <ShieldCheck size={13} />
+                    Assigned managers
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {property.managers.map((manager) => (
+                      <li key={manager.id} className="text-sm text-slate-700">
+                        <span className="font-semibold">{manager.name}</span>
+                        <span className="ml-2 text-xs text-slate-400">{manager.email}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-            )}
+              ) : null}
+            </section>
           </div>
         </div>
       </main>
 
-      {/* Edit Modal */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Property</h3>
-              <form onSubmit={handleUpdate} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Property Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.name || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Address *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.address || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      City *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormData.city || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      State *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormData.state || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Postal Code *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editFormData.postal_code || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, postal_code: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    value={editFormData.description || ''}
-                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={editFormData.status || 'active'}
-                    onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="archived">Archived</option>
-                  </select>
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <PropertyImageFields files={imageFiles} setFiles={setImageFiles} existing={editFormData} />
-                  <button
-                    type="button"
-                    onClick={() => setShowEditModal(false)}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            </div>
+      {/* Edit modal */}
+      <Modal
+        open={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Edit property"
+        description="Update the property registration details."
+        size="lg"
+        footer={
+          <>
+            <button type="button" onClick={() => setShowEditModal(false)} className="btn btn-secondary">Cancel</button>
+            <button type="submit" form="property-edit-form" disabled={saving} className="btn btn-primary">
+              {saving ? 'Saving...' : 'Save changes'}
+            </button>
+          </>
+        }
+      >
+        <form id="property-edit-form" onSubmit={handleUpdate} className="space-y-5">
+          <FormField label="Property name" required>
+            <input className="field-input" required value={editFormData.name || ''} onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} placeholder="e.g. Sunrise Residences" />
+          </FormField>
+          <FormField label="Address" required>
+            <input className="field-input" required value={editFormData.address || ''} onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })} placeholder="e.g. Bole Road, Addis Ababa" />
+          </FormField>
+          <div className="grid gap-5 sm:grid-cols-3">
+            <FormField label="City" required>
+              <input className="field-input" required value={editFormData.city || ''} onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })} placeholder="Addis Ababa" />
+            </FormField>
+            <FormField label="State / Region" required>
+              <input className="field-input" required value={editFormData.state || ''} onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })} placeholder="e.g. Bole" />
+            </FormField>
+            <FormField label="Postal code" required>
+              <input className="field-input" required value={editFormData.postal_code || ''} onChange={(e) => setEditFormData({ ...editFormData, postal_code: e.target.value })} placeholder="1000" />
+            </FormField>
           </div>
-        </div>
-      )}
+          <FormField label="Description">
+            <textarea className="field-input resize-none" rows={3} value={editFormData.description || ''} onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })} placeholder="Describe the building, amenities, and location." />
+          </FormField>
+          <div className="grid gap-5 sm:grid-cols-3">
+            <FormField label="Status">
+              <select className="field-input" value={editFormData.status || 'active'} onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="archived">Archived</option>
+              </select>
+            </FormField>
+            <FormField label="Total area (sq ft)">
+              <input type="number" className="field-input" value={editFormData.total_area || ''} onChange={(e) => setEditFormData({ ...editFormData, total_area: e.target.value })} placeholder="e.g. 2500" />
+            </FormField>
+            <FormField label="Year built">
+              <input type="number" className="field-input" value={editFormData.year_built || ''} onChange={(e) => setEditFormData({ ...editFormData, year_built: e.target.value })} placeholder="e.g. 2015" />
+            </FormField>
+          </div>
+          <div className="sm:col-span-3">
+            <FormField label="Property type">
+              <input className="field-input" value={editFormData.property_type || ''} onChange={(e) => setEditFormData({ ...editFormData, property_type: e.target.value })} placeholder="e.g. Apartment complex" />
+            </FormField>
+          </div>
+          <PropertyImageFields files={imageFiles} setFiles={setImageFiles} existing={editFormData} />
+        </form>
+      </Modal>
+
       <ConfirmDialog
         open={showDeleteDialog}
         title="Delete property?"
@@ -385,5 +365,21 @@ export default function PropertyDetailPage() {
         loading={deleting}
       />
     </AppShell>
+    </AuthGuard>
+  );
+}
+
+function Stat({ row, value, tone }) {
+  const colors = {
+    default: 'text-slate-900',
+    emerald: 'text-emerald-600',
+    blue: 'text-sky-600',
+    amber: 'text-amber-600',
+  };
+  return (
+    <div className="flex items-center justify-between border-b border-slate-50 pb-3 last:border-0 last:pb-0">
+      <span className="text-sm text-slate-500">{row}</span>
+      <span className={`text-sm font-semibold ${colors[tone] || colors.default}`}>{value}</span>
+    </div>
   );
 }

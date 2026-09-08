@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Propentra — Frontend
 
-## Getting Started
+Next.js (App Router, `app/`) client for the Propentra property-management platform. Roles: administrator, property owner, property manager, tenant.
 
-First, run the development server:
+## Prerequisites
+
+- Node.js 18+
+- Laravel backend running on `http://localhost:8000` (`php artisan serve`)
+- Backend storage linked: `php artisan storage:link` (for property/maintenance images)
+
+## Setup
+
+```bash
+npm install
+```
+
+Set the backend URL (defaults to `http://localhost:8000/api`):
+
+```bash
+# frontend/.env.local
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
+```
+
+## Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Demo data
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+Seed the database with realistic demo data (images require GD; reruns are idempotent):
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+php -d extension=gd artisan db:seed --class=DemoDataSeeder
+```
 
-## Learn More
+Every seeded account uses password `password`:
 
-To learn more about Next.js, take a look at the following resources:
+| Role | Demo account |
+|---|---|
+| Administrator | `demo.admin@propentra.local` |
+| Owner (Sunrise Tower, Green Heights) | `demo.owner@propentra.local` |
+| Manager (Sunrise Tower, Green Heights) | `demo.manager@propentra.local` |
+| Tenants | `demo.tenant@…demo.tenant5@propentra.local` |
+| Extra test accounts | `test4@…test7@example.com` |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `npm run dev` — development server
+- `npm run lint` — ESLint
+- `npm run build` — production build (run before shipping)
 
-## Deploy on Vercel
+## Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `app/` — routes (login, register, dashboard, properties, units, tenants, leases, payments, maintenance, expenses is backend-managed, reports, notifications, discussion, settings, profile)
+- `components/` — `AppShell`, `AuthGuard`, `ResourceDetailPage`, plus `ui/` design-system primitives (Badge, Modal, FormField, EmptyState, Skeleton, PageHeader)
+- `contexts/` — `AuthContext`, `ToastContext`
+- `lib/api.js` — API client for `/api/v1`

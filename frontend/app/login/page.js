@@ -1,9 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/Logo';
+
+const demoAccounts = [
+  ['Administrator', 'demo.admin@propentra.local'],
+  ['Property owner', 'demo.owner@propentra.local'],
+  ['Property manager', 'demo.manager@propentra.local'],
+  ['Tenant', 'demo.tenant@propentra.local'],
+];
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,49 +21,46 @@ export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
     setLoading(true);
 
     const result = await login(email, password);
-    
+
     if (result.success) {
       router.push('/dashboard');
     } else {
       setError(result.message || 'Login failed');
     }
-    
+
     setLoading(false);
   };
 
+  const fillDemoAccount = (demoEmail) => {
+    setEmail(demoEmail);
+    setPassword('password');
+    setError('');
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-teal-50 px-4">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
-        <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <Logo size="lg" />
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+      <div className="w-full max-w-md">
+        <div className="card p-8 sm:p-10">
+          <div className="flex justify-center">
+            <Logo size="md" markOnly />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">
-            Welcome to Propentra
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Property Management Software
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
-            </div>
-          )}
-          
-          <div className="space-y-4">
+          <p className="mt-6 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700">Welcome back</p>
+          <h1 className="mt-2 text-center text-2xl font-semibold tracking-tight text-slate-950">Sign in to Propentra</h1>
+          <p className="mt-2 text-center text-sm text-slate-500">Access your properties, tenants, and payments.</p>
+
+          <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+            {error && (
+              <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p>
+            )}
+
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
+              <label htmlFor="email" className="field-label">Email address</label>
               <input
                 id="email"
                 name="email"
@@ -63,16 +68,14 @@ export default function LoginPage() {
                 autoComplete="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full bg-white px-3 py-2 text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                onChange={(event) => setEmail(event.target.value)}
+                className="field-input mt-1.5 w-full"
                 placeholder="you@example.com"
               />
             </div>
-            
+
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
+              <label htmlFor="password" className="field-label">Password</label>
               <input
                 id="password"
                 name="password"
@@ -80,32 +83,41 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full bg-white px-3 py-2 text-gray-900 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                onChange={(event) => setPassword(event.target.value)}
+                className="field-input mt-1.5 w-full"
                 placeholder="••••••••"
               />
             </div>
-          </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Signing in...' : 'Sign in'}
+            <button type="submit" disabled={loading} className="btn btn-primary w-full">
+              {loading ? 'Signing in…' : 'Sign in'}
             </button>
-          </div>
+          </form>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Don&apos;t have an account?{' '}
-              <a href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-                Register here
-              </a>
-            </p>
-          </div>
-        </form>
+          <p className="mt-6 text-center text-sm text-slate-500">
+            Don&apos;t have an account?{' '}
+            <Link href="/register" className="font-semibold text-teal-700 hover:text-teal-900">Register here</Link>
+          </p>
+        </div>
+
+        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Demo accounts</p>
+          <p className="mt-1 text-xs text-slate-500">Password for all accounts: <span className="font-mono font-semibold text-slate-700">password</span></p>
+          <ul className="mt-3 space-y-1">
+            {demoAccounts.map(([role, demoEmail]) => (
+              <li key={demoEmail}>
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount(demoEmail)}
+                  className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-xs text-slate-600 transition hover:bg-slate-50"
+                >
+                  <span className="font-medium text-slate-700">{role}</span>
+                  <span className="font-mono text-slate-500">{demoEmail}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

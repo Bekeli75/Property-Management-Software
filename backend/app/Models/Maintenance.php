@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Maintenance extends Model
 {
@@ -49,6 +50,11 @@ class Maintenance extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Tenant::class);
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(MaintenancePhoto::class);
     }
 
     public function scopePending($query)

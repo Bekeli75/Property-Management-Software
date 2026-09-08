@@ -179,12 +179,19 @@ class ApiClient {
     return this.patch('/auth/profile', data);
   }
 
-  async getDiscussions() {
-    return this.get('/tenant-portal/discussions');
+  async getConversationMessages(tenantId) {
+    const params = tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : '';
+    return this.get(`/tenant-portal/discussions${params}`);
   }
 
-  async createDiscussion(message) {
-    return this.post('/tenant-portal/discussions', { message });
+  async getConversations() {
+    return this.get('/tenant-portal/conversations');
+  }
+
+  async createDiscussion(message, tenantId = null) {
+    const body = { message };
+    if (tenantId) body.tenant_id = tenantId;
+    return this.post('/tenant-portal/discussions', body);
   }
 
   async getNotifications() {
@@ -251,10 +258,6 @@ class ApiClient {
     return this.post('/units', data);
   }
 
-  async updateUnit(id, data) {
-    return this.put(`/units/${id}`, data);
-  }
-
   async deleteUnit(id) {
     return this.delete(`/units/${id}`);
   }
@@ -276,10 +279,6 @@ class ApiClient {
     return this.post('/tenants', data);
   }
 
-  async updateTenant(id, data) {
-    return this.put(`/tenants/${id}`, data);
-  }
-
   async deleteTenant(id) {
     return this.delete(`/tenants/${id}`);
   }
@@ -295,10 +294,6 @@ class ApiClient {
 
   async createLease(data) {
     return this.post('/leases', data);
-  }
-
-  async updateLease(id, data) {
-    return this.put(`/leases/${id}`, data);
   }
 
   async deleteLease(id) {
@@ -322,20 +317,12 @@ class ApiClient {
     return this.post('/payments', data);
   }
 
-  async updatePayment(id, data) {
-    return this.put(`/payments/${id}`, data);
-  }
-
   async deletePayment(id) {
     return this.delete(`/payments/${id}`);
   }
 
   async initiateChapaPayment(data) {
     return this.post('/payments/chapa/initiate', data);
-  }
-
-  async chapaCallback(data) {
-    return this.post('/payments/chapa/callback', data);
   }
 
   // Maintenance
@@ -365,27 +352,6 @@ class ApiClient {
 
   async completeMaintenanceRequest(id, data) {
     return this.post(`/maintenance/${id}/complete`, data);
-  }
-
-  // Expenses
-  async getExpenses() {
-    return this.get('/expenses');
-  }
-
-  async getExpense(id) {
-    return this.get(`/expenses/${id}`);
-  }
-
-  async createExpense(data) {
-    return this.post('/expenses', data);
-  }
-
-  async updateExpense(id, data) {
-    return this.put(`/expenses/${id}`, data);
-  }
-
-  async deleteExpense(id) {
-    return this.delete(`/expenses/${id}`);
   }
 
   // Dashboard

@@ -5,14 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import apiClient from '@/lib/api';
 import AppShell from '@/components/AppShell';
-
-const notifications = [
-  { title: 'Your account is ready', detail: 'Your tenant workspace is available.', time: 'Just now', tone: 'bg-teal-50 text-teal-700' },
-  { title: 'Stay up to date', detail: 'Payment and maintenance updates will appear here.', time: 'Account notice', tone: 'bg-slate-100 text-slate-600' },
-];
+import AuthGuard from '@/components/AuthGuard';
 
 export default function NotificationsPage() {
-  const { user, logout, isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
   const [notifications, setNotifications] = useState([]);
 
@@ -37,5 +33,5 @@ export default function NotificationsPage() {
     setNotifications((current) => current.map((item) => item.id === id ? { ...item, read_at: new Date().toISOString() } : item));
   };
 
-  return <AppShell><main className="mx-auto max-w-3xl px-5 py-8 sm:px-8"><p className="text-sm font-semibold text-teal-700">My account</p><div className="mt-1 flex items-end justify-between gap-4"><div><h1 className="text-3xl font-semibold tracking-tight">Notifications</h1><p className="mt-2 text-sm text-slate-500">Important updates about your home, payments, and requests.</p></div><span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">{notifications.filter((item) => !item.read_at).length} unread</span></div><section className="mt-8 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-sm">{notifications.length ? notifications.map((item) => <article key={item.id} className="flex gap-4 p-5"><span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-xs font-bold text-teal-700">!</span><div className="flex-1"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-sm font-semibold text-slate-900">{item.title}</h2>{!item.read_at && <button onClick={() => markRead(item.id)} className="text-xs font-semibold text-teal-700">Mark read</button>}</div><p className="mt-1 text-sm leading-6 text-slate-500">{item.message}</p></div></article>) : <p className="p-5 text-sm text-slate-500">No notifications yet.</p>}</section></main></AppShell>;
+  return <AuthGuard><AppShell><main className="mx-auto max-w-3xl px-5 py-8 sm:px-8"><p className="text-sm font-semibold text-teal-700">My account</p><div className="mt-1 flex items-end justify-between gap-4"><div><h1 className="text-3xl font-semibold tracking-tight">Notifications</h1><p className="mt-2 text-sm text-slate-500">Important updates about your home, payments, and requests.</p></div><span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">{notifications.filter((item) => !item.read_at).length} unread</span></div><section className="mt-8 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white shadow-sm">{notifications.length ? notifications.map((item) => <article key={item.id} className="flex gap-4 p-5"><span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-50 text-xs font-bold text-teal-700">!</span><div className="flex-1"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-sm font-semibold text-slate-900">{item.title}</h2>{!item.read_at && <button onClick={() => markRead(item.id)} className="text-xs font-semibold text-teal-700">Mark read</button>}</div><p className="mt-1 text-sm leading-6 text-slate-500">{item.message}</p></div></article>) : <p className="p-5 text-sm text-slate-500">No notifications yet.</p>}</section></main></AppShell></AuthGuard>;
 }

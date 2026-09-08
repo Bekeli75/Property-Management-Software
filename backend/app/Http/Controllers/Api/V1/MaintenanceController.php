@@ -32,7 +32,7 @@ class MaintenanceController extends ApiController
             });
         }
         
-        $maintenance = $query->with(['property', 'unit', 'tenant.user'])->get();
+        $maintenance = $query->with(['property', 'unit', 'tenant.user', 'photos'])->get();
         
         return $this->successResponse($maintenance, 'Maintenance requests retrieved successfully');
     }
@@ -42,20 +42,35 @@ class MaintenanceController extends ApiController
      */
     public function store(Request $request)
     {
+        $user = $request->user();
+
         $validated = $request->validate([
-            'property_id' => 'required|exists:properties,id',
+            'property_id' => $user->isTenant() ? 'nullable|exists:properties,id' : 'required|exists:properties,id',
             'unit_id' => 'required|exists:units,id',
-            'tenant_id' => 'required|exists:tenants,id',
+            'tenant_id' => $user->isTenant() ? 'nullable|exists:tenants,id' : 'required|exists:tenants,id',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'priority' => 'required|in:low,medium,high,urgent',
             'category' => 'required|in:plumbing,electrical,structural,hvac,appliances,other',
+            'photos' => 'nullable|array|max:5',
+            'photos.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
-        $property = \App\Models\Property::findOrFail($validated['property_id']);
         $unit = \App\Models\Unit::findOrFail($validated['unit_id']);
+
+        if ($user->isTenant()) {
+            $tenant = \App\Models\Tenant::where('user_id', $user->id)->first();
+            abort_unless($tenant, 403, 'No tenant profile found for your account.');
+            abort_unless($unit->activeLeaseFor($tenant)->exists(), 422, 'The selected unit is not assigned to you.');
+            $validated['tenant_id'] = $tenant->id;
+            $validated['property_id'] = $unit->property_id;
+        }
+
+        $property = \App\Models\Property::findOrFail($validated['property_id']);
         abort_unless($unit->property_id === $property->id, 422, 'The unit must belong to the selected property.');
-        $this->authorizePropertyAccess($request->user(), $property);
+        if (!$user->isTenant()) {
+            $this->authorizePropertyAccess($user, $property);
+        }
 
         $maintenance = Maintenance::create([
             ...$validated,
@@ -63,7 +78,34 @@ class MaintenanceController extends ApiController
             'requested_date' => now(),
         ]);
 
-        return $this->successResponse($maintenance, 'Maintenance request created successfully', 201);
+        $this->storePhotos($request, $maintenance);
+
+        return $this->successResponse($maintenance->load('photos'), 'Maintenance request created successfully', 201);
+    }
+
+    /**
+     * Persist uploaded maintenance photos.
+     */
+    private function storePhotos(Request $request, Maintenance $maintenance): void
+    {
+        $files = $request->file('photos');
+
+        if (!is_array($files)) {
+            return;
+        }
+
+        $files = array_values(array_filter($files));
+
+        foreach (array_slice($files, 0, 5) as $file) {
+            $path = $file->store('maintenance-photos', 'public');
+
+            $maintenance->photos()->create([
+                'file_path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
+            ]);
+        }
     }
 
     /**
@@ -72,7 +114,7 @@ class MaintenanceController extends ApiController
     public function show(Request $request, Maintenance $maintenance)
     {
         $this->authorizeMaintenanceAccess($request->user(), $maintenance);
-        $maintenance->load(['property', 'unit', 'tenant.user']);
+        $maintenance->load(['property', 'unit', 'tenant.user', 'photos']);
 
         return $this->successResponse($maintenance, 'Maintenance request retrieved successfully');
     }

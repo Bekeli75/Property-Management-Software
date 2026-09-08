@@ -1218,3 +1218,36 @@ The release bar is intentionally strict: 100% of P0 acceptance criteria, no unre
 # 34. Master Principle
 
 **Build the foundation first, enforce security continuously, integrate against the exact contract, deliver P0 before polishing P1, and never confuse “the screen works” with “the feature is complete.”**
+
+---
+
+# 35. Current Implementation Status
+
+**Document:** `MASTERPLAN.md`  
+**As of:** September 2026  
+
+## Built
+
+### Backend (Laravel, `/api/v1`)
+- Access-role authorization (administrator / owner / manager / tenant) enforced server-side on every API call.
+- Properties with owner + assigned-manager scoping; units; tenants; leases (incl. overlap prevention, early-termination workflow); manual payments; Chapa test-payment flow; maintenance requests (with photo upload); expenses; financial overview; reports; dashboard aggregation; notifications; discussion cases; profiles.
+- Automated feature tests (`php artisan test`, 12 tests / 26 assertions) including role-boundary checks.
+- `DemoDataSeeder` — realistic, idempotent demo dataset with GD-generated property/maintenance/lease images for every role.
+
+### Frontend (Next.js, `app/`)
+- Role-aware dashboards (dashboard, reports, profile, settings) with AuthGuard route protection (`roles` allow-list; unauthenticated → `/login`, unauthorized → `/dashboard`).
+- Full P0 modules: properties, units, tenants, leases, payments, maintenance. P1: notifications, discussion, reports, financial insights.
+- Premium design system (teal palette, `card`/`btn`/`Badge`/`Modal`/`FormField`/`EmptyState`/skeleton states), replaceable brand assets (`Logo`), toast feedback, and per-module detail pages via a shared `ResourceDetailPage`.
+- Pages: role-aware dashboard, notifications, settings, payments, leases, maintenance, units manager, login, register — all wired to the live API, no dead mock data or dead nav.
+- Rebuilt premium pages: root redirect, login (with demo-account quick-fill), register (tenant), property units manager (AuthGuard-restricted, card grid, add-unit modal).
+
+## Verified
+- AuthGuard blocks unauthenticated/unauthorized access and page-level guards prevent hydration crashes (eager JSX children rule handled in every protected page).
+- Payments workflow works for all roles; tenant sees only own records; owner/manager scoping confirmed backend-side.
+- Seeder idempotent (rerun leaves counts unchanged); demo images valid PNGs.
+
+## Remaining / Backlog
+- Production deployment (Vercel frontend + Wasmer/Laravel backend + MySQL + HTTPS + Chapa test verify in deployed env).
+- Six core journeys end-to-end UAT with the seeded accounts.
+- Responsive pass across 360px–1920px and accessibility review.
+- Frontend automated tests (ESLint passes; component-level tests not yet added).

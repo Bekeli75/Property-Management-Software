@@ -2,33 +2,58 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import { useRouter, useParams } from 'next/navigation';
 import apiClient from '@/lib/api';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import AppShell from '@/components/AppShell';
+import AuthGuard from '@/components/AuthGuard';
+import PageHeader from '@/components/ui/PageHeader';
+import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
+import FormField from '@/components/ui/FormField';
+import EmptyState from '@/components/ui/EmptyState';
+import { SkeletonCard } from '@/components/ui/Skeleton';
+import {
+  Plus,
+  LayoutGrid,
+  Ruler,
+  BedDouble,
+  Bath,
+  Banknote,
+  Trash2,
+  ArrowRight,
+} from 'lucide-react';
+
+const emptyForm = {
+  property_id: '',
+  unit_number: '',
+  floor: '',
+  type: 'apartment',
+  bedrooms: 1,
+  bathrooms: 1,
+  area: '',
+  base_rent: '',
+  amenities: '',
+  description: '',
+};
+
+function capitalize(value) {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+}
 
 export default function PropertyUnitsPage() {
-  const { user, isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
   const router = useRouter();
   const params = useParams();
+  const toast = useToast();
   const [units, setUnits] = useState([]);
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const [formData, setFormData] = useState({
-    property_id: params.id,
-    unit_number: '',
-    floor: '',
-    type: 'apartment',
-    bedrooms: 1,
-    bathrooms: 1,
-    area: '',
-    base_rent: '',
-    amenities: '',
-    description: '',
-  });
+  const [formData, setFormData] = useState({ ...emptyForm, property_id: params.id });
 
   const fetchUnits = useCallback(async () => {
     try {
@@ -36,51 +61,46 @@ export default function PropertyUnitsPage() {
         apiClient.getUnitsByProperty(params.id),
         apiClient.getProperty(params.id),
       ]);
-      
-      if (unitsResponse.success) {
-        setUnits(unitsResponse.data);
-      }
-      if (propertyResponse.success) {
-        setProperty(propertyResponse.data);
-      }
+
+      if (unitsResponse.success) setUnits(unitsResponse.data);
+      if (propertyResponse.success) setProperty(propertyResponse.data);
     } catch (error) {
       console.error('Failed to fetch units:', error);
+      toast.error('Unable to load units.');
     } finally {
       setLoading(false);
     }
-  }, [params.id]);
+  }, [params.id, toast]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/login');
-      return;
-    }
-
     void Promise.resolve().then(fetchUnits);
-  }, [fetchUnits, isAuthenticated, router]);
+  }, [fetchUnits]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    const numericFields = ['property_id', 'bedrooms', 'bathrooms', 'area', 'base_rent'];
+    const nextValue = numericFields.includes(name) && name !== 'property_id' ? (value === '' ? '' : Number(value)) : value;
+    setFormData((prev) => ({ ...prev, [name]: nextValue }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const response = await apiClient.createUnit(formData);
       if (response.success) {
+        toast.success('Unit created.');
         setShowModal(false);
-        setFormData({
-          property_id: params.id,
-          unit_number: '',
-          floor: '',
-          type: 'apartment',
-          bedrooms: 1,
-          bathrooms: 1,
-          area: '',
-          base_rent: '',
-          amenities: '',
-          description: '',
-        });
+        setFormData({ ...emptyForm, property_id: params.id });
         fetchUnits();
+      } else {
+        toast.error(response.message || 'Unable to create the unit.');
       }
     } catch (error) {
       console.error('Failed to create unit:', error);
+      toast.error('Unable to create the unit.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -88,9 +108,11 @@ export default function PropertyUnitsPage() {
     setDeleting(true);
     try {
       await apiClient.deleteUnit(id);
+      toast.success('Unit deleted.');
       fetchUnits();
     } catch (error) {
       console.error('Failed to delete unit:', error);
+      toast.error('Unable to delete the unit.');
     } finally {
       setDeleting(false);
       setDeleteId(null);
@@ -99,256 +121,206 @@ export default function PropertyUnitsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <AppShell>
+        <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+          <PageHeader
+            eyebrow="Property"
+            title={property?.name ? `${property.name} · Units` : 'Units'}
+            description="Manage the units in this property."
+          />
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        </main>
+      </AppShell>
     );
   }
 
+  const statIcon = 'text-teal-600';
+
   return (
-    <AppShell>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
-            All Units ({units.length})
-          </h2>
-          {(isOwner || isAdmin) && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-            >
-              Add Unit
-            </button>
-          )}
-        </div>
-
-        {units.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <p className="text-gray-600">No units found</p>
-            {(isOwner || isAdmin) && (
-              <button
-                onClick={() => setShowModal(true)}
-                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-              >
-                Add Your First Unit
+    <AuthGuard roles={['administrator', 'owner', 'manager']}>
+      <AppShell>
+        <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+          <PageHeader
+            eyebrow="Property"
+            title={property?.name ? `${property.name} · Units (${units.length})` : `Units (${units.length})`}
+            description="Keep floor plans, rent amounts, and unit details organized."
+            actions={
+              <button type="button" onClick={() => setShowModal(true)} className="btn btn-primary">
+                <Plus size={16} />
+                Add unit
               </button>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {units.map((unit) => (
-              <div key={unit.id} className="bg-white rounded-lg shadow hover:shadow-lg transition">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Unit {unit.unit_number}
-                    </h3>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      unit.status === 'available' ? 'bg-green-100 text-green-800' :
-                      unit.status === 'occupied' ? 'bg-blue-100 text-blue-800' :
-                      unit.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {unit.status}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-4 capitalize">{unit.type}</p>
-                  <div className="space-y-2 text-sm">
-                    <p className="text-gray-600">
-                      <span className="font-medium">Floor:</span> {unit.floor || 'N/A'}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Bedrooms:</span> {unit.bedrooms}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Bathrooms:</span> {unit.bathrooms}
-                    </p>
-                    {unit.area && (
-                      <p className="text-gray-600">
-                        <span className="font-medium">Area:</span> {unit.area} sq ft
-                      </p>
-                    )}
-                    <p className="text-gray-600">
-                      <span className="font-medium">Base Rent:</span> ETB {unit.base_rent?.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      onClick={() => router.push(`/units/${unit.id}`)}
-                      className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition text-sm"
-                    >
-                      View Details
-                    </button>
-                    {(isOwner || isAdmin) && (
-                      <button
-                        onClick={() => setDeleteId(unit.id)}
-                        className="px-3 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition text-sm"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
+            }
+          />
 
-      {/* Add Unit Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Unit</h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unit Number *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.unit_number}
-                    onChange={(e) => setFormData({ ...formData, unit_number: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., 101, A1, etc."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Floor
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.floor}
-                    onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., 1st, Ground, etc."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unit Type *
-                  </label>
-                  <select
-                    required
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="apartment">Apartment</option>
-                    <option value="house">House</option>
-                    <option value="commercial">Commercial</option>
-                    <option value="office">Office</option>
-                    <option value="studio">Studio</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Bedrooms *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      value={formData.bedrooms}
-                      onChange={(e) => setFormData({ ...formData, bedrooms: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Bathrooms *
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      value={formData.bathrooms}
-                      onChange={(e) => setFormData({ ...formData, bathrooms: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Area (sq ft)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.area}
-                    onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Base Rent (ETB) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    step="0.01"
-                    value={formData.base_rent}
-                    onChange={(e) => setFormData({ ...formData, base_rent: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Amenities
-                  </label>
-                  <textarea
-                    value={formData.amenities}
-                    onChange={(e) => setFormData({ ...formData, amenities: e.target.value })}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="e.g., Parking, Balcony, etc."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                  >
-                    Add Unit
-                  </button>
-                </div>
-              </form>
+          {units.length === 0 ? (
+            <div className="mt-8">
+              <EmptyState
+                icon={LayoutGrid}
+                title="No units yet"
+                description="Add your first unit to start linking tenants and generating rent."
+                actionLabel="Add your first unit"
+                onAction={() => setShowModal(true)}
+              />
             </div>
-          </div>
-        </div>
-      )}
-      <ConfirmDialog
-        open={deleteId !== null}
-        title="Delete unit?"
-        message="This will remove the unit from the property. This action cannot be undone."
-        onCancel={() => setDeleteId(null)}
-        onConfirm={() => handleDelete(deleteId)}
-        loading={deleting}
-      />
-    </AppShell>
+          ) : (
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {units.map((unit) => (
+                <div key={unit.id} className="card flex flex-col p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
+                        <LayoutGrid size={20} strokeWidth={1.75} />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold text-slate-900">Unit {unit.unit_number}</h3>
+                        <p className="text-sm capitalize text-slate-500">{unit.type}</p>
+                      </div>
+                    </div>
+                    <Badge variant={unit.status === 'maintenance' ? 'amber' : undefined} status={unit.status}>
+                      {capitalize(unit.status)}
+                    </Badge>
+                  </div>
+
+                  <dl className="mt-5 grid grid-cols-2 gap-x-3 gap-y-3 text-sm">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Ruler size={15} className={statIcon} />
+                      <span className="font-medium">Floor:</span>
+                      <span>{unit.floor || 'N/A'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <BedDouble size={15} className={statIcon} />
+                      <span className="font-medium">Beds:</span>
+                      <span>{unit.bedrooms}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Bath size={15} className={statIcon} />
+                      <span className="font-medium">Baths:</span>
+                      <span>{unit.bathrooms}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Banknote size={15} className={statIcon} />
+                      <span className="font-medium">Rent:</span>
+                      <span>ETB {Number(unit.base_rent || 0).toLocaleString()}</span>
+                    </div>
+                    {unit.area && (
+                      <div className="col-span-2 flex items-center gap-2 text-slate-600">
+                        <Ruler size={15} className={statIcon} />
+                        <span className="font-medium">Area:</span>
+                        <span>{unit.area} sq ft</span>
+                      </div>
+                    )}
+                  </dl>
+
+                  <div className="mt-5 flex flex-1 items-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/units/${unit.id}`)}
+                      className="btn btn-secondary flex-1"
+                    >
+                      View details
+                      <ArrowRight size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteId(unit.id)}
+                      className="btn btn-ghost text-red-600 hover:bg-red-50"
+                      aria-label="Delete unit"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
+
+        <Modal
+          open={showModal}
+          onClose={() => setShowModal(false)}
+          title="Add new unit"
+          description={`Create a unit within ${property?.name || 'this property'}.`}
+          size="lg"
+          footer={
+            <>
+              <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary">Cancel</button>
+              <button type="submit" form="unit-form" disabled={saving} className="btn btn-primary">
+                {saving ? 'Adding…' : 'Add unit'}
+              </button>
+            </>
+          }
+        >
+          <form id="unit-form" onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FormField label="Unit number" required>
+                <input
+                  name="unit_number"
+                  className="field-input"
+                  required
+                  value={formData.unit_number}
+                  onChange={handleChange}
+                  placeholder="e.g. 101, A1"
+                />
+              </FormField>
+              <FormField label="Floor">
+                <input
+                  name="floor"
+                  className="field-input"
+                  value={formData.floor}
+                  onChange={handleChange}
+                  placeholder="e.g. 1st, Ground"
+                />
+              </FormField>
+            </div>
+
+            <FormField label="Unit type" required>
+              <select name="type" className="field-input" required value={formData.type} onChange={handleChange}>
+                <option value="apartment">Apartment</option>
+                <option value="house">House</option>
+                <option value="commercial">Commercial</option>
+                <option value="office">Office</option>
+                <option value="studio">Studio</option>
+                <option value="other">Other</option>
+              </select>
+            </FormField>
+
+            <div className="grid gap-5 sm:grid-cols-3">
+              <FormField label="Bedrooms" required>
+                <input name="bedrooms" type="number" min="0" className="field-input" required value={formData.bedrooms} onChange={handleChange} />
+              </FormField>
+              <FormField label="Bathrooms" required>
+                <input name="bathrooms" type="number" min="0" className="field-input" required value={formData.bathrooms} onChange={handleChange} />
+              </FormField>
+              <FormField label="Area (sq ft)">
+                <input name="area" type="number" min="0" className="field-input" value={formData.area} onChange={handleChange} placeholder="e.g. 75" />
+              </FormField>
+            </div>
+
+            <FormField label="Base rent (ETB)" required>
+              <input name="base_rent" type="number" min="0" step="0.01" className="field-input" required value={formData.base_rent} onChange={handleChange} placeholder="e.g. 12000" />
+            </FormField>
+
+            <FormField label="Amenities">
+              <textarea name="amenities" rows={2} className="field-input resize-none" value={formData.amenities} onChange={handleChange} placeholder="e.g. Parking, balcony, water heater" />
+            </FormField>
+
+            <FormField label="Description">
+              <textarea name="description" rows={2} className="field-input resize-none" value={formData.description} onChange={handleChange} placeholder="Additional details about this unit" />
+            </FormField>
+          </form>
+        </Modal>
+
+        <ConfirmDialog
+          open={deleteId !== null}
+          title="Delete unit?"
+          message="This will remove the unit from the property. This action cannot be undone."
+          onCancel={() => setDeleteId(null)}
+          onConfirm={() => handleDelete(deleteId)}
+          loading={deleting}
+        />
+      </AppShell>
+    </AuthGuard>
   );
 }

@@ -81,6 +81,7 @@ class DashboardController extends ApiController
                 'net_income' => $totalRentCollected - $totalExpenses,
                 'pending_maintenance' => $pendingMaintenance,
             ],
+            'chart_data' => $this->getRevenueChart($this->paymentBaseQuery($unitIds)),
             'recent_properties' => $properties->take(5),
             'recent_maintenance' => Maintenance::whereIn('property_id', $propertyIds)
                 ->with(['unit', 'tenant'])
@@ -133,6 +134,7 @@ class DashboardController extends ApiController
                 'total_rent_collected' => $totalRentCollected,
                 'pending_maintenance' => $pendingMaintenance,
             ],
+            'chart_data' => $this->getRevenueChart($this->paymentBaseQuery($unitIds)),
             'recent_properties' => $properties->take(5),
             'recent_maintenance' => Maintenance::whereIn('property_id', $propertyIds)
                 ->with(['unit', 'tenant'])
@@ -207,6 +209,9 @@ class DashboardController extends ApiController
                 'pending_maintenance' => Maintenance::whereIn('status', ['pending', 'in_progress'])->count(),
                 'total_users' => User::count(),
             ],
+            'chart_data' => $this->getRevenueChart(
+                Payment::query()
+            ),
             'recent_properties' => Property::latest()->take(5)->get(),
             'recent_maintenance' => Maintenance::with(['unit', 'tenant'])
                 ->latest()
@@ -217,5 +222,41 @@ class DashboardController extends ApiController
                 ->take(5)
                 ->get(),
         ];
+    }
+
+    /**
+     * Base query for payments scoped to a set of units.
+     */
+    private function paymentBaseQuery($unitIds)
+    {
+        return Payment::whereHas('lease', function ($q) use ($unitIds) {
+            $q->whereIn('unit_id', $unitIds);
+        });
+    }
+
+    /**
+     * Build a 6-month collected-revenue series for charting.
+     */
+    private function getRevenueChart($baseQuery)
+    {
+        $months = [];
+        $now = now();
+
+        for ($i = 5; $i >= 0; $i--) {
+            $start = (clone $now)->subMonths($i)->startOfMonth();
+            $end = (clone $now)->subMonths($i)->endOfMonth();
+
+            $collected = (clone $baseQuery)
+                ->where('status', 'completed')
+                ->whereBetween('payment_date', [$start, $end])
+                ->sum('amount');
+
+            $months[] = [
+                'month' => $start->format('M'),
+                'collected' => round((float) $collected, 2),
+            ];
+        }
+
+        return $months;
     }
 }
