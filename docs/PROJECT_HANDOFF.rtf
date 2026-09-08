@@ -1,0 +1,97 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Calibri;}{\f1 Consolas;}}
+\fs32\b Propentra Property Management Software\b0\fs22\par
+Project handoff and usage guide\par
+\par
+\fs26\b 1. Project Overview\b0\fs22\par
+Propentra is a property management SaaS application with a Laravel API backend and a Next.js JavaScript frontend. It supports property portfolios, units, tenants, leases, payments, maintenance, notifications, reports, search, user access, and profile settings.\par
+\par
+\fs26\b 2. How To Start The Application\b0\fs22\par
+Prerequisites: PHP 8.3+, Composer, Node.js, npm, and a configured database.\par
+\par
+\b Terminal 1 - Backend\b0\par
+Open PowerShell in the project root and run:\par
+\f1 Set-Location -LiteralPath 'D:\\becky\\Full Stack dev\\Daily-Internship-Projects\\Property Management Software\\backend'\par
+php artisan serve --host=127.0.0.1 --port=8000\f0\par
+Backend URL: http://localhost:8000\par
+API base URL: http://localhost:8000/api/v1\par
+\par
+\b Terminal 2 - Frontend\b0\par
+Open another PowerShell window and run:\par
+\f1 Set-Location -LiteralPath 'D:\\becky\\Full Stack dev\\Daily-Internship-Projects\\Property Management Software\\frontend'\par
+npm run dev\f0\par
+Frontend URL: http://localhost:3000\par
+Open: http://localhost:3000/login\par
+\par
+\b First-time backend setup\b0\par
+From the backend directory:\par
+\f1 composer install\par
+copy .env.example .env\par
+php artisan key:generate\par
+php artisan migrate\par
+php artisan storage:link\f0\par
+Configure the database values in backend/.env before running migrations.\par
+\par
+\fs26\b 3. Main User Workflows\b0\fs22\par
+\b Authentication:\b Register or log in at /login. Expired API sessions clear the token and return the user to login.\par
+\b Dashboard:\b Shows role-specific statistics, recent properties, payments, maintenance activity, global search, and notifications.\par
+\b Properties:\b Create, view, edit, delete, and manage property units. Optional Main, Alternate, and Additional images support JPG, PNG, and WEBP up to 5 MB.\par
+\b Units:\b Manage unit number, type, rent, status, bedrooms, bathrooms, area, and property association.\par
+\b Tenants:\b View authorized tenant records, create tenant profiles, and open tenant details.\par
+\b Leases:\b Create leases, view details, terminate leases, and monitor active or expiring records.\par
+\b Payments:\b Record payments, initiate Chapa payments, view payment details, and track status.\par
+\b Maintenance:\b Create, assign, complete, view, and delete maintenance requests.\par
+\b Search:\b Dashboard search is debounced and returns authorized properties, units, tenants, and leases.\par
+\b Notifications:\b The dashboard bell shows unread count, relative timestamps, mark-read, mark-all-read, and view-all actions.\par
+\b Reports:\b Reports use a dedicated authorized API endpoint and support optional date-from and date-to filters. Current occupancy and collection-rate visuals use real backend metrics.\par
+\b Settings/Profile:\b Update profile name and phone details.\par
+\par
+\fs26\b 4. Role Access\b0\fs22\par
+\b Administrator:\b Platform-wide access, user access management, properties, tenants, leases, payments, maintenance, reports, notifications, settings, and discussion.\par
+\b Owner:\b Own properties and related units, tenants, leases, payments, maintenance, reports, notifications, settings, and discussion.\par
+\b Manager:\b Assigned properties and related operations, reports, notifications, settings, and discussion.\par
+\b Tenant:\b Own lease, payments, maintenance requests, notifications, discussion, profile, and settings.\par
+Authorization is enforced on the backend; hidden frontend links are not the security boundary.\par
+\par
+\fs26\b 5. Security Improvements\b0\fs22\par
+- Added property and related-resource authorization to prevent IDOR access.\par
+- Replaced unsafe mass-assignment updates with validated fields.\par
+- Scoped users, expenses, search, reports, leases, payments, units, tenants, and maintenance.\par
+- Added login, registration, search, and payment callback throttling.\par
+- Added Sanctum token expiration.\par
+- Hardened Chapa callback verification and retry behavior.\par
+- Added restricted CORS configuration.\par
+- Added safe handling for non-JSON API responses.\par
+- Added secure image MIME, extension, and size validation.\par
+- Added accessible destructive-action confirmation dialogs.\par
+\par
+\fs26\b 6. Validation Commands\b0\fs22\par
+\b Frontend:\b\par
+\f1 cd frontend\par
+npm run lint\par
+npm run build\f0\par
+\par
+\b Backend:\b\par
+\f1 cd backend\par
+php artisan test\f0\par
+Current verified backend result: 12 tests passed and 26 assertions.\par
+\par
+\fs26\b 7. Important URLs\b0\fs22\par
+Login: http://localhost:3000/login\par
+Dashboard: http://localhost:3000/dashboard\par
+Properties: http://localhost:3000/properties\par
+Tenants: http://localhost:3000/tenants\par
+Leases: http://localhost:3000/leases\par
+Payments: http://localhost:3000/payments\par
+Maintenance: http://localhost:3000/maintenance\par
+Reports: http://localhost:3000/reports\par
+Settings: http://localhost:3000/settings\par
+\par
+\fs26\b 8. Git Status\b0\fs22\par
+The implementation was completed incrementally with focused commits. The latest verified worktree was clean.\par
+\par
+\fs26\b 9. Remaining Optional Work\b0\fs22\par
+Possible future enhancements include historical chart data, full authenticated browser testing for every CRUD flow, richer visual redesign of remaining compact utility pages, and organization-level multi-tenancy. These are enhancements rather than blockers for the current application.\par
+\par
+Generated for the Propentra project.\par
+}
