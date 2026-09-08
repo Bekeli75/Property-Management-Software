@@ -13,9 +13,11 @@ const baseNavigation = [
   { label: 'Leases', path: '/leases' },
   { label: 'Payments', path: '/payments' },
   { label: 'Maintenance', path: '/maintenance' },
+  { label: 'Discussion', path: '/discussion' },
   { label: 'Reports', path: '/reports', roles: ['administrator', 'owner', 'manager'] },
   { label: 'Notifications', path: '/notifications' },
   { label: 'Settings', path: '/settings' },
+  { label: 'Profile', path: '/profile', roles: ['tenant'] },
 ];
 
 export default function AppShell({ children }) {
