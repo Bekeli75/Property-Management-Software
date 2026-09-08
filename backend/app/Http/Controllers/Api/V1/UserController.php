@@ -15,15 +15,34 @@ class UserController extends ApiController
      */
     public function index(Request $request)
     {
-        if (!$request->user()->isAdmin() && $request->input('role') !== 'tenant') {
+        $role = $request->validate([
+            'role' => 'nullable|in:owner,manager,tenant,administrator',
+        ])['role'] ?? null;
+
+        if (!$request->user()->isAdmin() && $role !== 'tenant') {
             abort(403);
         }
 
         $query = User::query();
-        
-        // Filter by role if specified
-        if ($request->has('role')) {
-            $query->where('role', $request->role);
+
+        if ($role) {
+            $query->where('role', $role);
+        }
+
+        if (!$request->user()->isAdmin()) {
+            if ($request->user()->isTenant()) {
+                $query->whereKey($request->user()->id);
+            } elseif ($request->user()->isOwner()) {
+                $query->whereHas('tenant.leases.unit.property', function ($propertyQuery) use ($request) {
+                    $propertyQuery->where('owner_id', $request->user()->id);
+                });
+            } elseif ($request->user()->isManager()) {
+                $query->whereHas('tenant.leases.unit.property.managers', function ($managerQuery) use ($request) {
+                    $managerQuery->whereKey($request->user()->id);
+                });
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
         
         $users = $query->get(['id', 'name', 'email', 'role', 'phone']);
