@@ -8,6 +8,7 @@ import NotificationPopover from '@/components/NotificationPopover';
 
 const baseNavigation = [
   { label: 'Dashboard', path: '/dashboard' },
+  { label: 'User access', path: '/admin/users', roles: ['administrator'] },
   { label: 'Properties', path: '/properties', roles: ['administrator', 'owner', 'manager'] },
   { label: 'Tenants', path: '/tenants', roles: ['administrator', 'owner', 'manager'] },
   { label: 'Leases', path: '/leases' },
