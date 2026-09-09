@@ -1,0 +1,26 @@
+# Wasmer Edge deployment config — Propentra API (backend/)
+#
+# Two ways to deploy:
+#   A) Dashboard (recommended): create a backend-only GitHub repo, import it in the
+#      Wasmer dashboard, and Wasmer auto-detects Laravel + attaches a managed MySQL DB.
+#   B) CLI: install the Wasmer CLI, then run `wasmer deploy` from this (backend/)
+#      directory. This file + wasmer.toml are used to package and run the app.
+
+# PHP runtime (Wasmer registry package). Wasmer detects Laravel and installs
+# Composer dependencies automatically.
+[dependencies]
+"php/php" = "=8.3.4"
+
+# Mount the project at /app on the edge
+[fs]
+"/app/" = "."
+
+[[command]]
+name = "run"
+module = "php/php:php"
+runner = "wasi"
+[command.annotations.wasi]
+# Built-in PHP server rooted at Laravel's public/ dir; public/index.php is the
+# router so REST paths like /api/v1/* reach Laravel (static files under public/
+# fall back through index.php as well; /storage/* is served by routes/web.php).
+main-args = ["-t", "/app/public", "-S", "0.0.0.0:8080", "/app/public/index.php"]

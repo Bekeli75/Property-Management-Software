@@ -1,0 +1,21 @@
+# Wasmer Edge app config — Propentra API (backend/)
+# Used by `wasmer deploy` (and optional for dashboard imports). Secrets belong in
+# `wasmer app secrets`, NOT here. See deploy/README.md and docs/DEPLOYMENT.md.
+#
+# Database: `wasmer deploy` will prompt for a region that supports databases.
+# (Needs a single `locality.regions` entry, e.g. fr-roub1; pick from the prompt.)
+capabilities:
+  database:
+    engine: mysql
+
+env:
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+  # No long-running queue worker on serverless — process jobs inline.
+  QUEUE_CONNECTION: "sync"
+  SESSION_DRIVER: "database"
+  CACHE_STORE: "database"
+  # Serverless logs go to stdout/stderr, not a local file.
+  LOG_CHANNEL: "stderr"
+  FILESYSTEM_DISK: "public"
+  SANCTUM_TOKEN_EXPIRATION: "60"

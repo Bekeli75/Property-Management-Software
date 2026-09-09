@@ -6,17 +6,15 @@
 **Project:** Property Management Software MVP  
 **Delivery Target:** 6 weeks  
 **Frontend:** React.js → Vercel  
-**Backend:** Laravel REST API → VPS (nginx + PHP-FPM + MySQL)  
+**Backend:** Laravel REST API → Wasmer  
 **Database:** MySQL / approved relational database  
 **Payment:** Chapa Developer Tier / test environment  
 **Currency:** ETB
 
-> **Change — deployment host (Sept 2026):** the plan previously read "Laravel → Wasmer".
-> Wasmer is a WebAssembly edge platform and cannot host a PHP/MySQL application (no
-> managed MySQL, queue workers, or persistent upload storage). Per the SRS rule
-> *"any PHP 8.2+ host with MySQL"* and the Release Gate, the backend now targets a
-> self-managed VPS (free-tier recommended: Oracle Cloud Always-Free ARM, or ~$4/mo
-> alternative). See `docs/DEPLOYMENT.md` and `deploy/backend/`.
+> **Change — deployment host update (Sept 2026):** the plan listed the backend on
+> *Wasmer*. That remains the target: Wasmer now offers free Laravel hosting with a managed
+> MySQL database, SSL, and no credit card — see `docs/DEPLOYMENT.md` and `deploy/README.md`.
+> A VPS fallback (`deploy/vps/`) exists if the free tier is ever outgrown.
 
 ---
 
@@ -194,7 +192,7 @@ These business rules are explicitly defined by the SRS. fileciteturn1file5
                                ▼
                     ┌──────────────────────┐
                     │ Laravel REST API     │
-                    │    VPS (PHP-FPM)     │
+                    │    Wasmer          │
                     ├──────────────────────┤
                     │ Sanctum              │
                     │ Form Requests        │
@@ -209,7 +207,7 @@ These business rules are explicitly defined by the SRS. fileciteturn1file5
                     └──────────┘ └─────────────┘
 ```
 
-The SRS specifies React.js, Laravel REST API, relational database, HTTPS/REST/JSON, Vercel, VPS hosting, and server-side Chapa test integration. fileciteturn2file10L1029-L1053
+The SRS specifies React.js, Laravel REST API, relational database, HTTPS/REST/JSON, Vercel, Wasmer, and server-side Chapa test integration. fileciteturn2file10L1029-L1053
 
 ---
 
@@ -511,7 +509,7 @@ The PRD identifies OQ-01 and OQ-02 as particularly important to Week 1. filec
 
 ### Deployment
 
-Perform an early staging deployment rather than waiting for Week 6. The PRD specifically recommends exercising Vercel/VPS deployment from Week 1.
+Perform an early staging deployment rather than waiting for Week 6. The PRD specifically recommends exercising Vercel/Wasmer deployment from Week 1.
 
 ---
 
@@ -714,7 +712,7 @@ Run regression after major fixes.
 ### Deployment
 
 - production frontend → Vercel
-- production backend → VPS (nginx + PHP-FPM + MySQL)
+- production backend → Wasmer
 - production database configuration
 - environment variables
 - HTTPS
@@ -1013,7 +1011,7 @@ The PRD requires material changes to scope, behavior, business rules, security, 
 | Billing rules unresolved | Resolve OQ-01 early |
 | RBAC mistakes | Test boundaries continuously |
 | Integration blockers | Integrate frontend/backend continuously |
-| Deployment surprises | Stage on Vercel/VPS from Week 1 |
+| Deployment surprises | Stage on Vercel/Wasmer from Week 1 |
 | UAT participants unavailable | Schedule before Week 5 |
 | API changes late | Version and change-control the contract |
 
@@ -1066,7 +1064,7 @@ Release requires:
 ## Deployment
 
 - [ ] Vercel frontend verified
-- [ ] VPS backend verified
+- [ ] Wasmer backend verified
 - [ ] environment configuration verified
 - [ ] Chapa test workflow verified in deployed environment
 
@@ -1204,7 +1202,7 @@ The API Contract explicitly requires `docs/API-CONTRACT.md` to be treated as a v
 ## Deployment
 
 - [ ] Vercel
-- [ ] VPS backend deployed
+- [ ] Wasmer
 - [ ] environment configuration
 - [ ] database
 - [ ] smoke tests
@@ -1254,7 +1252,7 @@ The release bar is intentionally strict: 100% of P0 acceptance criteria, no unre
 - Seeder idempotent (rerun leaves counts unchanged); demo images valid PNGs.
 
 ## Remaining / Backlog
-- Production deployment (Vercel frontend + VPS Laravel backend + MySQL + HTTPS + Chapa test verify in deployed env).
+- Production deployment (Vercel frontend + Wasmer Laravel backend + MySQL + HTTPS + Chapa test verify in deployed env).
 - Six core journeys end-to-end UAT with the seeded accounts.
 - Responsive pass across 360px–1920px and accessibility review.
 - Frontend automated tests (ESLint passes; component-level tests not yet added).
