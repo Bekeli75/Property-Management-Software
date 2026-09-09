@@ -83,12 +83,12 @@ curl -i https://<app>.wasmer.app/storage/foobar.png # expect 404 (route works)
 3. Root directory: `frontend`.
 4. Add the environment variable:
 
-   | Variable             | Production value                         |
-   | -------------------- | ---------------------------------------- |
-   | `NEXT_PUBLIC_API_URL`| `https://<app>.wasmer.app/api`           |
+   | Variable             | Production value                                    |
+   | -------------------- | --------------------------------------------------- |
+   | `NEXT_PUBLIC_API_URL`| `https://<app>.wasmer.app/api/v1`                    |
 
-   The app appends `/v1`, so `NEXT_PUBLIC_API_URL` must be the API base **including `/api`**
-   (e.g. local: `http://localhost:8000/api`).
+   The frontend does **not** append `/v1` — the base URL must end in `/api/v1`
+   (e.g. local: `http://127.0.0.1:8899/api/v1`).
 5. Deploy. Check `Settings → General` Node.js version is 18+.
 6. Create your first real account via `/register` (tenant) and the admin Users page
    for owner/manager/admin accounts.
