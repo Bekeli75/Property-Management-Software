@@ -134,6 +134,11 @@ export default function MaintenancePage() {
     try {
       let payload;
       if (isTenant) {
+        if (units.length === 0) {
+          toast.error('You need an active lease before you can file a maintenance request.');
+          setSaving(false);
+          return;
+        }
         if (!formData.unit_id) {
           toast.error('Please select a unit.');
           setSaving(false);
@@ -408,6 +413,11 @@ export default function MaintenancePage() {
                 </FormField>
               </div>
             </>
+          ) : units.length === 0 ? (
+            <p className="rounded-lg bg-slate-50 p-4 text-sm leading-6 text-slate-500">
+              No active lease is linked to this account yet, so there is no unit you can report an issue for.
+              Ask your property manager to link your lease, then come back here.
+            </p>
           ) : (
             <FormField label="Unit" required hint="Choose the unit where the issue is located.">
               <select className="field-input" required value={formData.unit_id} onChange={(e) => setFormData({ ...formData, unit_id: e.target.value })}>

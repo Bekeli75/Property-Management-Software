@@ -359,6 +359,12 @@ export default function PaymentsPage() {
         </div>
 
         <form id="chapa-form" onSubmit={handleChapaSubmit} className="space-y-5">
+          {leases.length === 0 ? (
+            <p className="rounded-lg bg-slate-50 p-4 text-sm leading-6 text-slate-500">
+              No active lease is linked to this account yet, so there is no rent to pay online.
+              Ask your property manager to link your lease, then use Chapa here.
+            </p>
+          ) : (
           <FormField label="Active lease" required>
             <select
               className="field-input"
@@ -377,6 +383,7 @@ export default function PaymentsPage() {
               ))}
             </select>
           </FormField>
+          )}
 
           <FormField label="Amount (ETB)" required>
             <input type="number" min="0" step="0.01" className="field-input" required value={chapaFormData.amount} onChange={(e) => setChapaFormData({ ...chapaFormData, amount: e.target.value })} placeholder="e.g. 25000" />

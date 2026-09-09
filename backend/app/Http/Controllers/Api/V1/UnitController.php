@@ -19,7 +19,15 @@ class UnitController extends ApiController
         $query = Unit::query();
         
         // Role-based filtering
-        if ($user->isOwner()) {
+        if ($user->isTenant()) {
+            $tenant = \App\Models\Tenant::where('user_id', $user->id)->first();
+            if (!$tenant) {
+                return $this->successResponse([], 'Units retrieved successfully');
+            }
+            $query->whereHas('activeLease', function ($q) use ($tenant) {
+                $q->where('tenant_id', $tenant->id);
+            });
+        } elseif ($user->isOwner()) {
             $query->whereHas('property', function ($q) use ($user) {
                 $q->where('owner_id', $user->id);
             });

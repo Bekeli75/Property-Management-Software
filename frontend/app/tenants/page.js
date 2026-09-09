@@ -47,7 +47,7 @@ export default function TenantsPage() {
   const [users, setUsers] = useState([]);
   const [formData, setFormData] = useState(emptyForm);
 
-  const canManage = isOwner || isAdmin;
+  const canManage = isOwner || isManager || isAdmin;
 
   const fetchTenants = useCallback(async () => {
     try {
