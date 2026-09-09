@@ -6,10 +6,17 @@
 **Project:** Property Management Software MVP  
 **Delivery Target:** 6 weeks  
 **Frontend:** React.js → Vercel  
-**Backend:** Laravel REST API → Wasmer  
+**Backend:** Laravel REST API → VPS (nginx + PHP-FPM + MySQL)  
 **Database:** MySQL / approved relational database  
 **Payment:** Chapa Developer Tier / test environment  
 **Currency:** ETB
+
+> **Change — deployment host (Sept 2026):** the plan previously read "Laravel → Wasmer".
+> Wasmer is a WebAssembly edge platform and cannot host a PHP/MySQL application (no
+> managed MySQL, queue workers, or persistent upload storage). Per the SRS rule
+> *"any PHP 8.2+ host with MySQL"* and the Release Gate, the backend now targets a
+> self-managed VPS (free-tier recommended: Oracle Cloud Always-Free ARM, or ~$4/mo
+> alternative). See `docs/DEPLOYMENT.md` and `deploy/backend/`.
 
 ---
 
@@ -187,7 +194,7 @@ These business rules are explicitly defined by the SRS. fileciteturn1file5
                                ▼
                     ┌──────────────────────┐
                     │ Laravel REST API     │
-                    │       Wasmer         │
+                    │    VPS (PHP-FPM)     │
                     ├──────────────────────┤
                     │ Sanctum              │
                     │ Form Requests        │
@@ -202,7 +209,7 @@ These business rules are explicitly defined by the SRS. fileciteturn1file5
                     └──────────┘ └─────────────┘
 ```
 
-The SRS specifies React.js, Laravel REST API, relational database, HTTPS/REST/JSON, Vercel, Wasmer, and server-side Chapa test integration. fileciteturn2file10L1029-L1053
+The SRS specifies React.js, Laravel REST API, relational database, HTTPS/REST/JSON, Vercel, VPS hosting, and server-side Chapa test integration. fileciteturn2file10L1029-L1053
 
 ---
 
@@ -504,7 +511,7 @@ The PRD identifies OQ-01 and OQ-02 as particularly important to Week 1. filec
 
 ### Deployment
 
-Perform an early staging deployment rather than waiting for Week 6. The PRD specifically recommends exercising Vercel/Wasmer deployment from Week 1. fileciteturn3file4L512-L517
+Perform an early staging deployment rather than waiting for Week 6. The PRD specifically recommends exercising Vercel/VPS deployment from Week 1.
 
 ---
 
@@ -707,7 +714,7 @@ Run regression after major fixes.
 ### Deployment
 
 - production frontend → Vercel
-- production backend → Wasmer
+- production backend → VPS (nginx + PHP-FPM + MySQL)
 - production database configuration
 - environment variables
 - HTTPS
@@ -1006,7 +1013,7 @@ The PRD requires material changes to scope, behavior, business rules, security, 
 | Billing rules unresolved | Resolve OQ-01 early |
 | RBAC mistakes | Test boundaries continuously |
 | Integration blockers | Integrate frontend/backend continuously |
-| Deployment surprises | Stage on Vercel/Wasmer from Week 1 |
+| Deployment surprises | Stage on Vercel/VPS from Week 1 |
 | UAT participants unavailable | Schedule before Week 5 |
 | API changes late | Version and change-control the contract |
 
@@ -1059,7 +1066,7 @@ Release requires:
 ## Deployment
 
 - [ ] Vercel frontend verified
-- [ ] Wasmer backend verified
+- [ ] VPS backend verified
 - [ ] environment configuration verified
 - [ ] Chapa test workflow verified in deployed environment
 
@@ -1197,7 +1204,7 @@ The API Contract explicitly requires `docs/API-CONTRACT.md` to be treated as a v
 ## Deployment
 
 - [ ] Vercel
-- [ ] Wasmer
+- [ ] VPS backend deployed
 - [ ] environment configuration
 - [ ] database
 - [ ] smoke tests
@@ -1239,7 +1246,7 @@ The release bar is intentionally strict: 100% of P0 acceptance criteria, no unre
 - Full P0 modules: properties, units, tenants, leases, payments, maintenance. P1: notifications, discussion, reports, financial insights.
 - Premium design system (teal palette, `card`/`btn`/`Badge`/`Modal`/`FormField`/`EmptyState`/skeleton states), replaceable brand assets (`Logo`), toast feedback, and per-module detail pages via a shared `ResourceDetailPage`.
 - Pages: role-aware dashboard, notifications, settings, payments, leases, maintenance, units manager, login, register — all wired to the live API, no dead mock data or dead nav.
-- Rebuilt premium pages: root redirect, login (with demo-account quick-fill), register (tenant), property units manager (AuthGuard-restricted, card grid, add-unit modal).
+- Rebuilt premium pages: root redirect, login (email/password), register (tenant), property units manager (AuthGuard-restricted, card grid, add-unit modal).
 
 ## Verified
 - AuthGuard blocks unauthenticated/unauthorized access and page-level guards prevent hydration crashes (eager JSX children rule handled in every protected page).
@@ -1247,7 +1254,7 @@ The release bar is intentionally strict: 100% of P0 acceptance criteria, no unre
 - Seeder idempotent (rerun leaves counts unchanged); demo images valid PNGs.
 
 ## Remaining / Backlog
-- Production deployment (Vercel frontend + Wasmer/Laravel backend + MySQL + HTTPS + Chapa test verify in deployed env).
+- Production deployment (Vercel frontend + VPS Laravel backend + MySQL + HTTPS + Chapa test verify in deployed env).
 - Six core journeys end-to-end UAT with the seeded accounts.
 - Responsive pass across 360px–1920px and accessibility review.
 - Frontend automated tests (ESLint passes; component-level tests not yet added).
