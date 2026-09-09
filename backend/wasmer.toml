@@ -7,9 +7,10 @@
 #      directory. This file + wasmer.toml are used to package and run the app.
 
 # PHP runtime (Wasmer registry package). Wasmer detects Laravel and installs
-# Composer dependencies automatically.
+# Composer dependencies automatically. Pin to PHP 8.4 (composer.json requires
+# ^8.4 — symfony 8.1 / Laravel 13 need >=8.4.1).
 [dependencies]
-"php/php" = "=8.3.4"
+"php/php" = "8.4.x"
 
 # Mount the project at /app on the edge
 [fs]
