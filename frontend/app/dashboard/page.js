@@ -148,8 +148,9 @@ export default function DashboardPage() {
   }
 
   const meta = roleMeta[user?.role] || roleMeta.tenant;
-  const statistics = Object.entries(data?.statistics || {});
   const isStaff = user?.role && user.role !== 'tenant';
+  const tenantStatKeys = new Set(['active_lease', 'outstanding_rent', 'total_paid', 'maintenance_requests', 'pending_maintenance']);
+  const statistics = Object.entries(data?.statistics || {}).filter(([key]) => isStaff || tenantStatKeys.has(key));
 
   return (
     <AuthGuard>

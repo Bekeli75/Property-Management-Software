@@ -31,7 +31,7 @@ function formatDate(value) {
 }
 
 export default function MaintenanceDetailPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, isTenant, user } = useAuth();
   const router = useRouter();
   const params = useParams();
   const [request, setRequest] = useState(null);
@@ -50,8 +50,14 @@ export default function MaintenanceDetailPage() {
     const load = async () => {
       try {
         const response = await apiClient.getMaintenanceRequest(params.id);
-        if (active && response.success) setRequest(response.data);
-        else if (active) setError(response.message || 'Unable to load this request.');
+        if (!active) return;
+        if (!response.success) {
+          setError(response.message || 'Unable to load this request.');
+        } else if (isTenant && response.data?.tenant_id !== user?.tenant?.id) {
+          setError('Unable to load this request.');
+        } else {
+          setRequest(response.data);
+        }
       } catch (err) {
         console.error('Failed to fetch request:', err);
         if (active) setError('Unable to load this request.');
@@ -62,7 +68,7 @@ export default function MaintenanceDetailPage() {
 
     load();
     return () => { active = false; };
-  }, [isAuthenticated, params.id]);
+  }, [isAuthenticated, isTenant, user?.tenant?.id, params.id]);
 
   if (authLoading || loading) {
     return (
@@ -125,8 +131,8 @@ export default function MaintenanceDetailPage() {
               <h2 className="mt-1 text-lg font-semibold text-slate-950">Description</h2>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600">{request.description}</p>
               <dl className="mt-5 grid gap-4 border-t border-slate-100 pt-5 sm:grid-cols-2">
-                <Field icon={UserCheck} label="Assigned to" value={request.assigned_to || 'Not yet assigned'} />
-                <Field icon={Banknote} label="Actual cost" value={formatCurrency(request.actual_cost)} />
+                {!isTenant && <Field icon={UserCheck} label="Assigned to" value={request.assigned_to || 'Not yet assigned'} />}
+                {!isTenant && <Field icon={Banknote} label="Actual cost" value={formatCurrency(request.actual_cost)} />}
                 <Field icon={CalendarClock} label="Scheduled" value={formatDate(request.scheduled_date)} />
                 <Field icon={CheckCircle} label="Completed" value={formatDate(request.completed_date)} />
               </dl>

@@ -21,7 +21,7 @@ function formatMoney(value) {
 }
 
 export default function PaymentDetailPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, isTenant, user } = useAuth();
   const router = useRouter();
   const params = useParams();
   const [payment, setPayment] = useState(null);
@@ -39,8 +39,14 @@ export default function PaymentDetailPage() {
     const load = async () => {
       try {
         const response = await apiClient.getPayment(params.id);
-        if (active && response.success) setPayment(response.data);
-        else if (active) setError(response.message || 'Unable to load this payment.');
+        if (!active) return;
+        if (!response.success) {
+          setError(response.message || 'Unable to load this payment.');
+        } else if (isTenant && response.data?.tenant_id !== user?.tenant?.id) {
+          setError('Unable to load this payment.');
+        } else {
+          setPayment(response.data);
+        }
       } catch (err) {
         console.error('Failed to fetch payment:', err);
         if (active) setError('Unable to load this payment.');
@@ -51,7 +57,7 @@ export default function PaymentDetailPage() {
 
     load();
     return () => { active = false; };
-  }, [isAuthenticated, params.id]);
+  }, [isAuthenticated, isTenant, user?.tenant?.id, params.id]);
 
   if (authLoading || loading) {
     return (
@@ -132,7 +138,7 @@ export default function PaymentDetailPage() {
               </section>
             )}
 
-            {payment.notes && (
+            {!isTenant && payment.notes && (
               <section className="card p-6 sm:p-7">
                 <p className="page-eyebrow">Notes</p>
                 <h2 className="mt-1 text-lg font-semibold text-slate-950">Staff notes</h2>

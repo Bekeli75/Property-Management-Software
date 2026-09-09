@@ -60,6 +60,10 @@ export default function PaymentsPage() {
 
   const canManage = isOwner || isManager || isAdmin;
 
+  const pageDescription = isTenant
+    ? 'View and pay your rent, track your payment history, and manage Chapa payments.'
+    : 'Track rent collections, bank transfers and Chapa payments in your workspace.';
+
   const totalCollected = payments
     .filter((p) => p.status === 'completed')
     .reduce((sum, p) => sum + Number(p.amount || 0), 0);
@@ -162,7 +166,7 @@ export default function PaymentsPage() {
     return (
       <AppShell>
         <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
-          <PageHeader eyebrow="Finance" title="Payments" description="Track rent collections, bank transfers and Chapa payments." />
+          <PageHeader eyebrow="Finance" title="Payments" description={pageDescription} />
           <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
@@ -178,7 +182,7 @@ export default function PaymentsPage() {
         <PageHeader
           eyebrow="Finance"
           title={`Payments (${payments.length})`}
-          description="Track rent collections, bank transfers and Chapa payments."
+          description={pageDescription}
           actions={
             <div className="flex flex-wrap gap-2">
               {isTenant && (
@@ -197,12 +201,14 @@ export default function PaymentsPage() {
           }
         />
 
-        {/* Summary cards */}
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <SummaryCard icon={Banknote} label="Collected" value={`ETB ${totalCollected.toLocaleString()}`} accent="emerald" />
-          <SummaryCard icon={Clock} label="Pending" value={String(pendingPayments.length)} accent="amber" />
-          <SummaryCard icon={CheckCircle2} label="Completed" value={String(completedPayments.length)} accent="emerald" />
-        </div>
+        {/* Summary cards (staff ledger — tenants see their own table instead) */}
+        {canManage && (
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <SummaryCard icon={Banknote} label="Collected" value={`ETB ${totalCollected.toLocaleString()}`} accent="emerald" />
+            <SummaryCard icon={Clock} label="Pending" value={String(pendingPayments.length)} accent="amber" />
+            <SummaryCard icon={CheckCircle2} label="Completed" value={String(completedPayments.length)} accent="emerald" />
+          </div>
+        )}
 
         {payments.length === 0 ? (
           <div className="mt-8">
@@ -220,7 +226,7 @@ export default function PaymentsPage() {
               <table className="min-w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/60 text-xs uppercase tracking-wide text-slate-400">
-                    <th className="px-6 py-3 font-medium">Tenant</th>
+                    <th className="px-6 py-3 font-medium">{isTenant ? 'You' : 'Tenant'}</th>
                     <th className="px-6 py-3 font-medium">Amount</th>
                     <th className="px-6 py-3 font-medium">Dates</th>
                     <th className="px-6 py-3 font-medium">Method</th>

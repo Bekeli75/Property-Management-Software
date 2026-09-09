@@ -3,21 +3,32 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import apiClient from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
-const groups = [
+const staffGroups = [
   ['properties', 'Properties'],
   ['units', 'Units'],
   ['tenants', 'Tenants'],
   ['leases', 'Leases'],
 ];
 
+const tenantGroups = [
+  ['leases', 'My records'],
+];
+
 export default function GlobalSearch() {
+  const { user } = useAuth();
   const router = useRouter();
   const containerRef = useRef(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const groups = user?.role === 'tenant' ? tenantGroups : staffGroups;
+  const placeholder = user?.role === 'tenant'
+    ? 'Search your lease records...'
+    : 'Search properties, units, tenants...';
 
   useEffect(() => {
     const trimmedQuery = query.trim();
@@ -80,7 +91,7 @@ export default function GlobalSearch() {
             setResults(null);
           }
         }}
-        placeholder="Search properties, units, tenants..."
+        placeholder={placeholder}
         className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-100"
       />
       {query.trim().length >= 2 && (loading || error || results) && (

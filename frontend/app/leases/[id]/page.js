@@ -25,7 +25,7 @@ function formatDate(value) {
 }
 
 export default function LeaseDetailPage() {
-  const { isAuthenticated, loading: authLoading, isTenant } = useAuth();
+  const { isAuthenticated, loading: authLoading, isTenant, user } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const params = useParams();
@@ -52,8 +52,14 @@ export default function LeaseDetailPage() {
     const load = async () => {
       try {
         const response = await apiClient.getLease(params.id);
-        if (active && response.success) setLease(response.data);
-        else if (active) setError(response.message || 'Unable to load this lease.');
+        if (!active) return;
+        if (!response.success) {
+          setError(response.message || 'Unable to load this lease.');
+        } else if (isTenant && response.data?.tenant_id !== user?.tenant?.id) {
+          setError('Unable to load this lease.');
+        } else {
+          setLease(response.data);
+        }
       } catch (err) {
         console.error('Failed to fetch lease:', err);
         if (active) setError('Unable to load this lease.');
@@ -64,7 +70,7 @@ export default function LeaseDetailPage() {
 
     load();
     return () => { active = false; };
-  }, [isAuthenticated, params.id]);
+  }, [isAuthenticated, isTenant, user?.tenant?.id, params.id]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.replace('/login');
