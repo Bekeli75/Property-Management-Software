@@ -54,9 +54,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
-      <div className="w-full max-w-md">
-        <div className="card p-8 sm:p-10">
+    <div className="flex min-h-dvh items-stretch justify-center bg-slate-50 px-4 py-8 sm:items-center sm:py-10">
+      <div className="flex w-full max-w-md flex-col justify-center">
+        <div className="card p-6 sm:p-10">
           <div className="flex justify-center">
             <Logo size="md" markOnly />
           </div>

@@ -155,13 +155,13 @@ export default function AppShell({ children }) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#0b1220] lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#0b1220] md:flex">
         {NavContent}
       </aside>
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 md:hidden">
           <div
             className="modal-backdrop absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
@@ -180,27 +180,29 @@ export default function AppShell({ children }) {
         </div>
       )}
 
-      <div className="lg:pl-64">
+      <div className="md:pl-64">
         {/* Top header */}
         <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-[#f0f4f8]/85 backdrop-blur-xl">
-          <div className="flex min-h-20 items-center justify-between gap-4 px-5 py-4 sm:px-8">
+          <div className="flex min-h-20 flex-wrap items-center gap-3 px-4 py-3 sm:px-8">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-200/60 lg:hidden"
+              className="rounded-lg p-2 text-slate-600 hover:bg-slate-200/60 md:hidden"
               aria-label="Open navigation"
             >
               <Menu size={22} />
             </button>
-            <button onClick={() => router.push('/dashboard')} className="lg:hidden" aria-label="Go to dashboard">
+            <button onClick={() => router.push('/dashboard')} className="md:hidden" aria-label="Go to dashboard">
               <Logo size="sm" markOnly />
             </button>
-            <div className="ml-auto flex w-full max-w-xl items-center justify-end gap-3">
-              <GlobalSearch />
+            <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3">
+              <div className="hidden min-w-0 flex-1 sm:block sm:max-w-md lg:max-w-xl">
+                <GlobalSearch />
+              </div>
               <NotificationPopover />
               <button
                 onClick={handleLogout}
-                className="btn btn-secondary px-3 py-2 text-sm lg:hidden"
+                className="btn btn-secondary shrink-0 px-3 py-2 text-sm md:hidden"
               >
                 Sign out
               </button>

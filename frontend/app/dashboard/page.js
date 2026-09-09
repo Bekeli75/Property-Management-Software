@@ -11,6 +11,7 @@ import RevenueChart from '@/components/charts/RevenueChart';
 import { SkeletonStat } from '@/components/ui/Skeleton';
 import Badge from '@/components/ui/Badge';
 import ErrorState from '@/components/ui/ErrorState';
+import { imageUrl } from '@/components/PropertyImageFields';
 import {
   Building2,
   LayoutGrid,
@@ -158,7 +159,7 @@ export default function DashboardPage() {
         <section className="dashboard-hero mb-8 flex flex-col justify-between gap-5 rounded-2xl px-6 py-7 text-white shadow-lg sm:flex-row sm:items-end sm:px-8">
           <div className="relative">
             <p className="text-sm font-medium text-teal-300">{meta.eyebrow}</p>
-            <h2 className="mt-2 max-w-xl text-2xl font-semibold tracking-tight">Good to see you, {(user?.name || 'there').split(' ')[0]}.</h2>
+            <h2 className="mt-2 max-w-xl text-xl font-semibold tracking-tight sm:text-2xl">Good to see you, {(user?.name || 'there').split(' ')[0]}.</h2>
             <p className="mt-2 max-w-lg text-sm leading-6 text-slate-300">{meta.description}</p>
           </div>
           <button
@@ -241,29 +242,41 @@ export default function DashboardPage() {
                   </div>
                 ) : data?.recent_properties?.length ? (
                   <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {data.recent_properties.slice(0, 6).map((property) => (
-                      <button
-                        key={property.id}
-                        type="button"
-                        onClick={() => router.push(`/properties/${property.id}`)}
-                        className="group overflow-hidden rounded-xl border border-slate-200 bg-white text-left transition hover:-translate-y-0.5 hover:border-teal-400 hover:shadow-md"
-                      >
-                        <div className="property-card-banner flex h-24 items-end justify-between p-4">
-                          <Badge status={property.status || 'active'} className="bg-white/90 text-slate-700" />
-                          <span className="text-xs font-semibold text-white/90">{property.property_type || 'Property'}</span>
-                        </div>
-                        <div className="p-4">
-                          <h3 className="truncate text-sm font-semibold text-slate-950 group-hover:text-teal-700">{property.name}</h3>
-                          <p className="mt-1 truncate text-xs text-slate-500">
-                            {[property.city, property.state].filter(Boolean).join(', ') || property.address || 'Location not added'}
-                          </p>
-                          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
-                            <span>{property.year_built ? `Built ${property.year_built}` : 'Property overview'}</span>
-                            <span className="font-semibold text-teal-700">Open &rarr;</span>
+                    {data.recent_properties.slice(0, 6).map((property) => {
+                      const cover = imageUrl(property.image_1);
+                      return (
+                        <button
+                          key={property.id}
+                          type="button"
+                          onClick={() => router.push(`/properties/${property.id}`)}
+                          className="group overflow-hidden rounded-xl border border-slate-200 bg-white text-left transition hover:-translate-y-0.5 hover:border-teal-400 hover:shadow-md"
+                        >
+                          <div className="relative h-24 overflow-hidden">
+                            {cover ? (
+                              <img src={cover} alt="" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                            ) : (
+                              <div className="property-card-banner h-full w-full" />
+                            )}
+                            <span className="absolute left-3 top-3">
+                              <Badge status={property.status || 'active'} className="bg-white/90 text-slate-700" />
+                            </span>
+                            <span className="absolute right-3 top-3 rounded-md bg-slate-950/50 px-2 py-0.5 text-[10px] font-semibold text-white/95 backdrop-blur-sm">
+                              {property.property_type || 'Property'}
+                            </span>
                           </div>
-                        </div>
-                      </button>
-                    ))}
+                          <div className="p-4">
+                            <h3 className="truncate text-sm font-semibold text-slate-950 group-hover:text-teal-700">{property.name}</h3>
+                            <p className="mt-1 truncate text-xs text-slate-500">
+                              {[property.city, property.state].filter(Boolean).join(', ') || property.address || 'Location not added'}
+                            </p>
+                            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
+                              <span>{property.year_built ? `Built ${property.year_built}` : 'Property overview'}</span>
+                              <span className="font-semibold text-teal-700">Open &rarr;</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white/70 p-8 text-center">

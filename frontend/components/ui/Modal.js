@@ -14,18 +14,33 @@ export default function Modal({
   closeOnBackdrop = true,
 }) {
   const panelRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  const closeOnBackdropRef = useRef(closeOnBackdrop);
+  onCloseRef.current = onClose;
+  closeOnBackdropRef.current = closeOnBackdrop;
+
+  const wasOpen = useRef(false);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open) {
+      wasOpen.current = false;
+      return undefined;
+    }
+
+    const justOpened = !wasOpen.current;
+    wasOpen.current = true;
+
+    if (justOpened) {
+      panelRef.current?.querySelector('input, textarea, select, button')?.focus();
+    }
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && closeOnBackdrop) onClose();
+      if (event.key === 'Escape' && closeOnBackdropRef.current) onCloseRef.current();
     };
     document.addEventListener('keydown', handleKeyDown);
-    panelRef.current?.querySelector('input, textarea, select, button')?.focus();
 
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, onClose, closeOnBackdrop]);
+  }, [open]);
 
   if (!open) return null;
 

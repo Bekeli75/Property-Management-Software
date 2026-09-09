@@ -1,39 +1,69 @@
 'use client';
 
 function LogoMark({ size = 32, variant = 'dark', className = '', glow = false }) {
-  const fill = variant === 'light' ? '#ffffff' : '#14b8a6';
-  const secondary = variant === 'light' ? 'rgba(255, 255, 255, 0.6)' : '#0f766e';
+  const text = variant === 'light' ? '#ffffff' : '#0d9488';
+  const accent = variant === 'light' ? '#5eead4' : '#14b8a6';
+  const soft = variant === 'light' ? 'rgba(255,255,255,0.9)' : '#ffffff';
+  const bg = variant === 'light' ? 'rgba(255,255,255,0.10)' : 'rgba(13,148,136,0.10)';
 
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 40 40"
+      viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-hidden="true"
     >
-      {glow && <circle cx="20" cy="20" r="19.5" fill="rgba(20, 184, 166, 0.12)" />}
-      {/* Building / property outline */}
-      <rect x="6" y="12" width="28" height="22" rx="2.5" stroke={fill} strokeWidth="2.6" />
-      {/* Roof line */}
-      <path d="M6 12L20 4L34 12" stroke={fill} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-      {/* P letterform formed by vertical bar + arch inside building */}
-      <path d="M16 26V15" stroke={fill} strokeWidth="2.8" strokeLinecap="round" />
-      <path d="M16 15C20.5 14.5 25 16.5 25 20.5C25 24.5 20.5 26.5 16 26" stroke={fill} strokeWidth="2.8" strokeLinecap="round" />
-      {/* Door detail */}
-      <path d="M17 34V28" stroke={secondary} strokeWidth="2" strokeLinecap="round" />
-      <path d="M23 34V28" stroke={secondary} strokeWidth="2" strokeLinecap="round" />
+      {glow && <circle cx="24" cy="24" r="23.5" fill={bg} />}
+      <defs>
+        <linearGradient id="pms-mark-grad" x1="10" y1="6" x2="38" y2="42" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#14b8a6" />
+          <stop offset="1" stopColor="#0f766e" />
+        </linearGradient>
+      </defs>
+
+      {/* Premium rounded badge */}
+      <rect x="4" y="4" width="40" height="40" rx="12" fill="url(#pms-mark-grad)" />
+
+      {/* Roof slab across the top (building roof = top of the P) */}
+      <rect x="10" y="8.5" width="26" height="5.5" rx="1.8" fill={soft} />
+
+      {/* Tower — the vertical stroke of the P */}
+      <rect x="13" y="13.5" width="7" height="26" rx="2" fill={soft} />
+
+      {/* Tower windows */}
+      <rect x="14.8" y="17" width="2" height="3" rx="0.6" fill={accent} />
+      <rect x="17.8" y="17" width="2" height="3" rx="0.6" fill={accent} />
+      <rect x="14.8" y="21.5" width="2" height="3" rx="0.6" fill={accent} />
+      <rect x="17.8" y="21.5" width="2" height="3" rx="0.6" fill={accent} />
+      <rect x="14.8" y="26" width="2" height="3" rx="0.6" fill={accent} />
+      <rect x="17.8" y="26" width="2" height="3" rx="0.6" fill={accent} />
+
+      {/* Entrance door */}
+      <rect x="16" y="35" width="3.2" height="4.5" rx="0.9" fill={accent} />
+
+      {/* P bowl — curved building front */}
+      <path
+        d="M20 15.5 C28 14.8 33.5 19.4 33.5 23 C33.5 27.6 28.2 30.6 20 30.4"
+        stroke={soft}
+        strokeWidth="6"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      {/* Ground line */}
+      <line x1="9" y1="41" x2="35" y2="41" stroke={soft} strokeWidth="1.8" strokeLinecap="round" opacity="0.4" />
     </svg>
   );
 }
 
 export default function Logo({ size = 'md', variant = 'dark', showTagline = true, markOnly = false, className = '' }) {
   const sizes = {
-    sm: { mark: 28, compact: false },
+    sm: { mark: 26, compact: false },
     md: { mark: 34, compact: true },
-    lg: { mark: 40, compact: true },
+    lg: { mark: 42, compact: true },
   };
 
   const config = sizes[size] || sizes.md;
@@ -42,7 +72,7 @@ export default function Logo({ size = 'md', variant = 'dark', showTagline = true
     return <LogoMark size={config.mark} variant={variant} className={className} />;
   }
 
-  const wordColor = variant === 'light' ? 'text-white' : 'text-slate-950';
+  const wordColor = variant === 'light' ? 'text-white' : 'text-slate-900';
   const taglineColor = variant === 'light' ? 'text-slate-400' : 'text-slate-500';
 
   return (
@@ -50,12 +80,12 @@ export default function Logo({ size = 'md', variant = 'dark', showTagline = true
       <LogoMark size={config.mark} variant={variant} />
       {config.compact && (
         <div className="leading-none">
-          <p className={`text-lg font-bold uppercase tracking-[0.14em] ${wordColor}`}>
+          <p className={`text-base font-bold tracking-[0.08em] ${wordColor}`}>
             Propentra
           </p>
           {showTagline && (
-            <p className={`mt-1 text-[10px] font-medium tracking-[0.08em] ${taglineColor}`}>
-              Property Intelligence &amp; Management
+            <p className={`mt-1 text-[9px] font-medium tracking-[0.08em] ${taglineColor}`}>
+              Property Management Software
             </p>
           )}
         </div>

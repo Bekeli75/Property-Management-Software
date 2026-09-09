@@ -14,8 +14,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Propentra - Property Management Software",
+  title: "Property Management Software",
   description: "Professional property management system for owners, managers, and tenants",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({ children }) {
