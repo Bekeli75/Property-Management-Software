@@ -16,8 +16,11 @@ export default function Modal({
   const panelRef = useRef(null);
   const onCloseRef = useRef(onClose);
   const closeOnBackdropRef = useRef(closeOnBackdrop);
-  onCloseRef.current = onClose;
-  closeOnBackdropRef.current = closeOnBackdrop;
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    closeOnBackdropRef.current = closeOnBackdrop;
+  }, [onClose, closeOnBackdrop]);
 
   const wasOpen = useRef(false);
 
