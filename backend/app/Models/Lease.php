@@ -27,6 +27,8 @@ class Lease extends Model
         'termination_effective_date',
         'termination_reason',
         'termination_requested_by',
+        'termination_approved_by',
+        'termination_approved_at',
     ];
 
     protected $casts = [

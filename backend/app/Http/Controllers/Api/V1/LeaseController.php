@@ -156,6 +156,13 @@ $leases = $query->with(['tenant.user', 'unit.property'])->get();
 
         $lease->update($validated);
 
+        // Keep the unit status in sync when a lease is ended or reactivated
+        if (in_array($validated['status'] ?? null, ['terminated', 'expired'])) {
+            $lease->unit->update(['status' => 'available']);
+        } elseif (($validated['status'] ?? null) === 'active') {
+            $lease->unit->update(['status' => 'occupied']);
+        }
+
         return $this->successResponse($lease, 'Lease updated successfully');
     }
 
@@ -166,6 +173,7 @@ $leases = $query->with(['tenant.user', 'unit.property'])->get();
     {
         $this->authorizeLeaseAccess($request->user(), $lease);
         abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot delete leases.');
+        $lease->unit->update(['status' => 'available']);
         $lease->delete();
 
         return $this->successResponse([], 'Lease deleted successfully');
@@ -177,6 +185,8 @@ $leases = $query->with(['tenant.user', 'unit.property'])->get();
     public function terminate(Request $request, Lease $lease)
     {
         $this->authorizeLeaseAccess($request->user(), $lease);
+        abort_unless($lease->status === 'active', 422, 'Only active leases can be terminated.');
+
         $request->validate([
             'termination_reason' => 'required|string',
             'termination_effective_date' => 'required|date|after:today',
@@ -191,5 +201,27 @@ $leases = $query->with(['tenant.user', 'unit.property'])->get();
         ]);
 
         return $this->successResponse($lease, 'Termination request submitted successfully');
+    }
+
+    /**
+     * Approve a pending lease termination
+     */
+    public function approveTermination(Request $request, Lease $lease)
+    {
+        $this->authorizeLeaseAccess($request->user(), $lease);
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot approve terminations.');
+        abort_unless($lease->status === 'pending_termination', 422, 'This lease has no pending termination request.');
+
+        $lease->update([
+            'status' => 'terminated',
+            'termination_request_date' => $lease->termination_request_date ?? now(),
+            'termination_approved_by' => $request->user()->id,
+            'termination_approved_at' => now(),
+        ]);
+
+        // Free up the unit so it can be rented again
+        $lease->unit->update(['status' => 'available']);
+
+        return $this->successResponse($lease->load('unit'), 'Lease terminated successfully');
     }
 }

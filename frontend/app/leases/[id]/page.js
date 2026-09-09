@@ -1,14 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/lib/api';
 import AppShell from '@/components/AppShell';
 import AuthGuard from '@/components/AuthGuard';
 import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
+import FormField from '@/components/ui/FormField';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { SkeletonCard } from '@/components/ui/Skeleton';
-import { ArrowLeft, FileText, Paperclip, CreditCard, CalendarRange, Banknote, User, Building2 } from 'lucide-react';
+import { ArrowLeft, FileText, Paperclip, CreditCard, CalendarRange, Banknote, User, Building2, XCircle } from 'lucide-react';
 
 function formatCurrency(value) {
   if (value === null || value === undefined || value === '') return '—';
@@ -21,12 +25,25 @@ function formatDate(value) {
 }
 
 export default function LeaseDetailPage() {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading, isTenant } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const params = useParams();
   const [lease, setLease] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showTerminateModal, setShowTerminateModal] = useState(false);
+  const [terminationForm, setTerminationForm] = useState({ termination_reason: '', termination_effective_date: '' });
+  const [terminating, setTerminating] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [confirmApprove, setConfirmApprove] = useState(false);
+
+  const isStaff = !isTenant;
+  const tomorrow = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) return undefined;
@@ -52,6 +69,51 @@ export default function LeaseDetailPage() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.replace('/login');
   }, [authLoading, isAuthenticated, router]);
+
+  const reloadLease = async () => {
+    const response = await apiClient.getLease(params.id);
+    if (response.success) setLease(response.data);
+  };
+
+  const handleTerminateSubmit = async (e) => {
+    e.preventDefault();
+    setTerminating(true);
+    try {
+      const response = await apiClient.terminateLease(lease.id, terminationForm);
+      if (response.success) {
+        toast.success('Termination request submitted.');
+        setShowTerminateModal(false);
+        setTerminationForm({ termination_reason: '', termination_effective_date: '' });
+        await reloadLease();
+      } else {
+        toast.error(response.message || 'Unable to submit the request.');
+      }
+    } catch (err) {
+      console.error('Failed to terminate lease:', err);
+      toast.error(err.message || 'Unable to submit the request.');
+    } finally {
+      setTerminating(false);
+    }
+  };
+
+  const handleApproveTermination = async () => {
+    setConfirmApprove(false);
+    setApproving(true);
+    try {
+      const response = await apiClient.approveTerminationLease(lease.id);
+      if (response.success) {
+        toast.success('Lease terminated. The unit is now available.');
+        await reloadLease();
+      } else {
+        toast.error(response.message || 'Unable to approve the termination.');
+      }
+    } catch (err) {
+      console.error('Failed to approve termination:', err);
+      toast.error(err.message || 'Unable to approve the termination.');
+    } finally {
+      setApproving(false);
+    }
+  };
 
   if (authLoading || loading) {
     return (
@@ -101,7 +163,26 @@ export default function LeaseDetailPage() {
                 <span className="flex items-center gap-1.5"><User size={14} /> {lease.tenant?.user?.email || 'No email'}</span>
               </p>
             </div>
-            <Badge status={lease.status} className="bg-white/90 text-slate-800" />
+            <div className="flex flex-col items-end gap-3">
+              <Badge status={lease.status} className="bg-white/90 text-slate-800" />
+              <div className="flex flex-wrap gap-2">
+                {lease.status === 'active' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTerminateModal(true)}
+                    className="btn btn-secondary"
+                  >
+                    <XCircle size={14} />
+                    Request termination
+                  </button>
+                )}
+                {lease.status === 'pending_termination' && isStaff && (
+                  <button type="button" onClick={() => setConfirmApprove(true)} disabled={approving} className="btn btn-primary">
+                    {approving ? 'Approving...' : 'Approve termination'}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -221,6 +302,40 @@ export default function LeaseDetailPage() {
           </div>
         </div>
       </main>
+
+      {/* Request termination modal */}
+      <Modal
+        open={showTerminateModal}
+        onClose={() => { setShowTerminateModal(false); setTerminationForm({ termination_reason: '', termination_effective_date: '' }); }}
+        title="Request lease termination"
+        description={lease ? `Terminating the lease for ${lease.unit?.unit_number || 'this unit'}. This sends a request for the property manager to approve.` : ''}
+        footer={
+          <>
+            <button type="button" onClick={() => setShowTerminateModal(false)} className="btn btn-secondary">Cancel</button>
+            <button type="submit" form="terminate-form" disabled={terminating} className="btn btn-danger">
+              {terminating ? 'Submitting...' : 'Submit request'}
+            </button>
+          </>
+        }
+      >
+        <form id="terminate-form" onSubmit={handleTerminateSubmit} className="space-y-5">
+          <FormField label="Reason for termination" required>
+            <textarea className="field-input resize-none" rows={3} required minLength={10} value={terminationForm.termination_reason} onChange={(e) => setTerminationForm({ ...terminationForm, termination_reason: e.target.value })} placeholder="Explain why this lease is ending" />
+          </FormField>
+          <FormField label="Effective date" required>
+            <input type="date" className="field-input" required min={tomorrow} value={terminationForm.termination_effective_date} onChange={(e) => setTerminationForm({ ...terminationForm, termination_effective_date: e.target.value })} />
+          </FormField>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={confirmApprove}
+        title="Approve lease termination?"
+        message="This will mark the lease as terminated and make the unit available again. This action cannot be undone."
+        onCancel={() => setConfirmApprove(false)}
+        onConfirm={handleApproveTermination}
+        loading={approving}
+      />
     </AppShell>
     </AuthGuard>
   );

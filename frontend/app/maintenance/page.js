@@ -164,7 +164,7 @@ export default function MaintenancePage() {
       }
     } catch (error) {
       console.error('Failed to create maintenance request:', error);
-      toast.error('Unable to create the request.');
+      toast.error(error.message || 'Unable to create the request.');
     } finally {
       setSaving(false);
     }
@@ -398,9 +398,9 @@ export default function MaintenancePage() {
                     ))}
                   </select>
                 </FormField>
-                <FormField label="Tenant">
-                  <select className="field-input" value={formData.tenant_id} onChange={(e) => setFormData({ ...formData, tenant_id: e.target.value })}>
-                    <option value="">Select a tenant (optional)</option>
+                <FormField label="Tenant" required hint="Select the tenant whose unit this issue is for.">
+                  <select className="field-input" required value={formData.tenant_id} onChange={(e) => setFormData({ ...formData, tenant_id: e.target.value })}>
+                    <option value="">Select a tenant</option>
                     {tenants.map((tenant) => (
                       <option key={tenant.id} value={tenant.id}>{tenant.user?.name}</option>
                     ))}

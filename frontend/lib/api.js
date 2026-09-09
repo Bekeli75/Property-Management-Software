@@ -77,7 +77,7 @@ class ApiClient {
             window.location.replace('/login');
           }
         }
-        throw new Error(this.getFriendlyError(response.status, endpoint));
+        throw new Error(this.buildErrorMessage(response.status, endpoint, data));
       }
 
       if (!data) {
@@ -92,6 +92,24 @@ class ApiClient {
       }
       throw error;
     }
+  }
+
+  buildErrorMessage(status, endpoint, data) {
+    if (status === 422 && data && typeof data === 'object') {
+      if (data.errors && typeof data.errors === 'object') {
+        const firstKey = Object.keys(data.errors)[0];
+        if (firstKey) {
+          const firstMessage = data.errors[firstKey];
+          if (Array.isArray(firstMessage)) return firstMessage[0];
+          if (typeof firstMessage === 'string') return firstMessage;
+        }
+      }
+      if (typeof data.message === 'string' && data.message) {
+        return data.message;
+      }
+    }
+
+    return this.getFriendlyError(status, endpoint);
   }
 
   getFriendlyError(status, endpoint) {
@@ -302,6 +320,10 @@ class ApiClient {
 
   async terminateLease(id, data) {
     return this.post(`/leases/${id}/terminate`, data);
+  }
+
+  async approveTerminationLease(id) {
+    return this.post(`/leases/${id}/approve-termination`, {});
   }
 
   // Payments

@@ -55,6 +55,7 @@ Route::prefix('v1')->group(function () {
         // Leases
         Route::apiResource('leases', LeaseController::class);
         Route::post('leases/{lease}/terminate', [LeaseController::class, 'terminate']);
+        Route::post('leases/{lease}/approve-termination', [LeaseController::class, 'approveTermination']);
         
         // Payments
         Route::apiResource('payments', PaymentController::class);

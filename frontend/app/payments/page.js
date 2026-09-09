@@ -43,7 +43,7 @@ function formatDate(value) {
 }
 
 export default function PaymentsPage() {
-  const { isAuthenticated, isOwner, isAdmin, isTenant } = useAuth();
+  const { isAuthenticated, isOwner, isManager, isAdmin, isTenant } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [payments, setPayments] = useState([]);
@@ -58,7 +58,7 @@ export default function PaymentsPage() {
   const [formData, setFormData] = useState(emptyForm);
   const [chapaFormData, setChapaFormData] = useState(chapaEmpty);
 
-  const canManage = isOwner || isAdmin;
+  const canManage = isOwner || isManager || isAdmin;
 
   const totalCollected = payments
     .filter((p) => p.status === 'completed')
@@ -95,7 +95,7 @@ export default function PaymentsPage() {
     }
     const load = async () => {
       await fetchPayments();
-      if (!isTenant) await fetchLeases();
+      await fetchLeases();
     };
     load();
   }, [isAuthenticated, isTenant, router, fetchPayments, fetchLeases]);
@@ -115,7 +115,7 @@ export default function PaymentsPage() {
       }
     } catch (error) {
       console.error('Failed to create payment:', error);
-      toast.error('Unable to record payment.');
+      toast.error(error.message || 'Unable to record payment.');
     } finally {
       setSaving(false);
     }
@@ -137,7 +137,7 @@ export default function PaymentsPage() {
       }
     } catch (error) {
       console.error('Failed to initiate Chapa payment:', error);
-      toast.error('Unable to start Chapa payment.');
+      toast.error(error.message || 'Unable to start Chapa payment.');
     } finally {
       setChapaSaving(false);
     }

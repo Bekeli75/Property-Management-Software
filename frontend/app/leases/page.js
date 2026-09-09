@@ -62,7 +62,15 @@ export default function LeasesPage() {
   const [terminateLease, setTerminateLease] = useState(null);
   const [terminationForm, setTerminationForm] = useState({ termination_reason: '', termination_effective_date: '' });
   const [terminating, setTerminating] = useState(false);
+  const [approveLease, setApproveLease] = useState(null);
+  const [approving, setApproving] = useState(false);
   const [formData, setFormData] = useState(emptyForm);
+
+  const tomorrow = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  }, []);
 
   const canManage = !isTenant && (isOwner || isManager || isAdmin);
 
@@ -155,7 +163,7 @@ export default function LeasesPage() {
       }
     } catch (error) {
       console.error('Failed to create lease:', error);
-      toast.error('Unable to create the lease.');
+      toast.error(error.message || 'Unable to create the lease.');
     } finally {
       setSaving(false);
     }
@@ -176,9 +184,28 @@ export default function LeasesPage() {
       }
     } catch (error) {
       console.error('Failed to terminate lease:', error);
-      toast.error('Unable to submit the request.');
+      toast.error(error.message || 'Unable to submit the request.');
     } finally {
       setTerminating(false);
+    }
+  };
+
+  const handleApproveTermination = async () => {
+    setApproving(true);
+    try {
+      const response = await apiClient.approveTerminationLease(approveLease.id);
+      if (response.success) {
+        toast.success('Lease terminated. The unit is now available.');
+        setApproveLease(null);
+        fetchLeases();
+      } else {
+        toast.error(response.message || 'Unable to approve the termination.');
+      }
+    } catch (error) {
+      console.error('Failed to approve termination:', error);
+      toast.error(error.message || 'Unable to approve the termination.');
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -283,10 +310,15 @@ export default function LeasesPage() {
                           View
                           <ArrowRight size={14} />
                         </button>
-                        {lease.status === 'active' && canManage && (
+                        {lease.status === 'active' && (canManage || isTenant) && (
                           <button type="button" onClick={() => setTerminateLease(lease)} className="ml-4 inline-flex items-center gap-1 text-amber-600 hover:text-amber-800">
                             <XCircle size={14} />
-                            Terminate
+                            {isTenant ? 'Request termination' : 'Terminate'}
+                          </button>
+                        )}
+                        {lease.status === 'pending_termination' && canManage && (
+                          <button type="button" onClick={() => setApproveLease(lease)} className="ml-4 inline-flex items-center gap-1 text-emerald-600 hover:text-emerald-800">
+                            Approve
                           </button>
                         )}
                         {canManage && (
@@ -365,10 +397,10 @@ export default function LeasesPage() {
             </p>
             <div className="grid gap-5 sm:grid-cols-2">
               <FormField label="Start date" required>
-                <input type="date" className="field-input" required value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
+                <input type="date" className="field-input" required min={tomorrow} value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
               </FormField>
               <FormField label="End date" required hint="Lease becomes active at midnight on the start date.">
-                <input type="date" className="field-input" required value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
+                <input type="date" className="field-input" required min={formData.start_date || tomorrow} value={formData.end_date} onChange={(e) => setFormData({ ...formData, end_date: e.target.value })} />
               </FormField>
             </div>
           </section>
@@ -447,10 +479,19 @@ export default function LeasesPage() {
             <textarea className="field-input resize-none" rows={3} required value={terminationForm.termination_reason} onChange={(e) => setTerminationForm({ ...terminationForm, termination_reason: e.target.value })} placeholder="Explain why this lease is ending" />
           </FormField>
           <FormField label="Effective date" required>
-            <input type="date" className="field-input" required min={new Date().toISOString().split('T')[0]} value={terminationForm.termination_effective_date} onChange={(e) => setTerminationForm({ ...terminationForm, termination_effective_date: e.target.value })} />
+            <input type="date" className="field-input" required min={tomorrow} value={terminationForm.termination_effective_date} onChange={(e) => setTerminationForm({ ...terminationForm, termination_effective_date: e.target.value })} />
           </FormField>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        open={approveLease !== null}
+        title="Approve lease termination?"
+        message={approveLease ? `This will mark the lease for ${approveLease.tenant?.user?.name || 'this tenant'} as terminated and make unit ${approveLease.unit?.unit_number || ''} available again. This action cannot be undone.` : ''}
+        onCancel={() => setApproveLease(null)}
+        onConfirm={handleApproveTermination}
+        loading={approving}
+      />
 
       <ConfirmDialog
         open={deleteId !== null}

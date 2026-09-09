@@ -32,6 +32,10 @@ class AuthController extends ApiController
 
         $token = $user->createToken('api-token')->plainTextToken;
 
+        if ($user->isTenant()) {
+            $user->load('tenant');
+        }
+
         return $this->successResponse([
             'user' => $user,
             'token' => $token,
@@ -65,6 +69,10 @@ class AuthController extends ApiController
         ]);
 
         $token = $user->createToken('api-token')->plainTextToken;
+
+        if ($user->isTenant()) {
+            $user->load('tenant');
+        }
 
         return $this->successResponse([
             'user' => $user,
@@ -114,8 +122,13 @@ class AuthController extends ApiController
         $request->user()->currentAccessToken()->delete();
         $token = $request->user()->createToken('api-token')->plainTextToken;
 
+        $user = $request->user();
+        if ($user->isTenant()) {
+            $user->load('tenant');
+        }
+
         return $this->successResponse([
-            'user' => $request->user(),
+            'user' => $user,
             'token' => $token,
         ], 'Token refreshed successfully');
     }
