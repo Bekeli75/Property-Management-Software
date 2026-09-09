@@ -4,9 +4,15 @@
 #
 # Database: `wasmer deploy` will prompt for a region that supports databases.
 # (Needs a single `locality.regions` entry, e.g. fr-roub1; pick from the prompt.)
+kind: wasmer.io/App.v1
+
 capabilities:
   database:
     engine: mysql
+
+locality:
+  regions:
+    - fr-roub1
 
 env:
   APP_ENV: "production"
