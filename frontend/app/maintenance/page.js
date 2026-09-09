@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/lib/api';
+import { tenantName } from '@/lib/tenantLabel';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import FileUpload from '@/components/FileUpload';
 import AppShell from '@/components/AppShell';
@@ -34,7 +35,7 @@ function formatDate(value) {
 }
 
 export default function MaintenancePage() {
-  const { user, isAuthenticated, isOwner, isAdmin, isTenant } = useAuth();
+  const { user, isAuthenticated, isOwner, isAdmin, isTenant, loading: authLoading } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [requests, setRequests] = useState([]);
@@ -112,6 +113,7 @@ export default function MaintenancePage() {
   }, [user]);
 
   useEffect(() => {
+    if (authLoading) return undefined;
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -126,7 +128,7 @@ export default function MaintenancePage() {
       }
     };
     load();
-  }, [isAuthenticated, isStaff, isTenant, router, fetchRequests, fetchProperties, fetchTenants, fetchUnitsForTenant]);
+  }, [authLoading, isAuthenticated, isStaff, isTenant, router, fetchRequests, fetchProperties, fetchTenants, fetchUnitsForTenant]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -407,7 +409,7 @@ export default function MaintenancePage() {
                   <select className="field-input" required value={formData.tenant_id} onChange={(e) => setFormData({ ...formData, tenant_id: e.target.value })}>
                     <option value="">Select a tenant</option>
                     {tenants.map((tenant) => (
-                      <option key={tenant.id} value={tenant.id}>{tenant.user?.name}</option>
+                      <option key={tenant.id} value={tenant.id}>{tenantName(tenant)}</option>
                     ))}
                   </select>
                 </FormField>

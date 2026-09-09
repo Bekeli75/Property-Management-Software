@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/lib/api';
+import { tenantName } from '@/lib/tenantLabel';
 import AppShell from '@/components/AppShell';
 import AuthGuard from '@/components/AuthGuard';
 import PageHeader from '@/components/ui/PageHeader';
@@ -43,7 +44,7 @@ function formatDate(value) {
 }
 
 export default function PaymentsPage() {
-  const { isAuthenticated, isOwner, isManager, isAdmin, isTenant } = useAuth();
+  const { isAuthenticated, isOwner, isManager, isAdmin, isTenant, loading: authLoading } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [payments, setPayments] = useState([]);
@@ -93,6 +94,7 @@ export default function PaymentsPage() {
   }, []);
 
   useEffect(() => {
+    if (authLoading) return undefined;
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -102,7 +104,7 @@ export default function PaymentsPage() {
       await fetchLeases();
     };
     load();
-  }, [isAuthenticated, isTenant, router, fetchPayments, fetchLeases]);
+  }, [authLoading, isAuthenticated, isTenant, router, fetchPayments, fetchLeases]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -300,7 +302,7 @@ export default function PaymentsPage() {
               <option value="">Select a lease</option>
               {leases.map((lease) => (
                 <option key={lease.id} value={lease.id}>
-                  {lease.tenant?.user?.name} — Unit {lease.unit?.unit_number} (ETB {lease.monthly_rent?.toLocaleString()}/mo)
+                  {tenantName(lease.tenant)} — Unit {lease.unit?.unit_number} (ETB {lease.monthly_rent?.toLocaleString()}/mo)
                 </option>
               ))}
             </select>
@@ -384,7 +386,7 @@ export default function PaymentsPage() {
               <option value="">Select a lease</option>
               {leases.map((lease) => (
                 <option key={lease.id} value={lease.id}>
-                  {lease.tenant?.user?.name} — Unit {lease.unit?.unit_number} (ETB {lease.monthly_rent?.toLocaleString()}/mo)
+                  {tenantName(lease.tenant)} — Unit {lease.unit?.unit_number} (ETB {lease.monthly_rent?.toLocaleString()}/mo)
                 </option>
               ))}
             </select>

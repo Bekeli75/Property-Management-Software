@@ -15,7 +15,7 @@ const roleLabels = {
 };
 
 export default function AdminUsersPage() {
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout, loading: authLoading } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [filter, setFilter] = useState('all');
@@ -33,6 +33,7 @@ export default function AdminUsersPage() {
   });
 
   useEffect(() => {
+    if (authLoading) return undefined;
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -61,7 +62,7 @@ export default function AdminUsersPage() {
     return () => {
       active = false;
     };
-  }, [isAuthenticated, isAdmin, router]);
+  }, [authLoading, isAuthenticated, isAdmin, router]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();

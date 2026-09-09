@@ -25,11 +25,12 @@ import {
   Trash2,
   Home,
   User as UserIcon,
+  UserPlus,
   ShieldCheck,
 } from 'lucide-react';
 
 export default function PropertyDetailPage() {
-  const { isAuthenticated, isOwner, isAdmin } = useAuth();
+  const { isAuthenticated, isOwner, isAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
   const params = useParams();
   const toast = useToast();
@@ -41,6 +42,11 @@ export default function PropertyDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [imageFiles, setImageFiles] = useState({});
   const [editFormData, setEditFormData] = useState({});
+  const [showManagersModal, setShowManagersModal] = useState(false);
+  const [managerUsers, setManagerUsers] = useState([]);
+  const [selectedManagerIds, setSelectedManagerIds] = useState([]);
+  const [managersLoading, setManagersLoading] = useState(false);
+  const [savingManagers, setSavingManagers] = useState(false);
 
   const canManage = isOwner || isAdmin;
 
@@ -60,12 +66,13 @@ export default function PropertyDetailPage() {
   }, [params.id, router]);
 
   useEffect(() => {
+    if (authLoading) return undefined;
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
     void Promise.resolve().then(fetchProperty);
-  }, [fetchProperty, isAuthenticated, router]);
+  }, [authLoading, isAuthenticated, router, fetchProperty]);
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -108,6 +115,42 @@ export default function PropertyDetailPage() {
       toast.error('Unable to delete the property.');
       setDeleting(false);
       setShowDeleteDialog(false);
+    }
+  };
+
+  const openManagersModal = async () => {
+    setShowManagersModal(true);
+    setSelectedManagerIds(property.managers?.map((m) => m.id) || []);
+    setManagersLoading(true);
+    try {
+      const response = await apiClient.getUsers('manager');
+      if (response.success) {
+        setManagerUsers(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch managers:', error);
+    } finally {
+      setManagersLoading(false);
+    }
+  };
+
+  const handleSaveManagers = async (e) => {
+    e.preventDefault();
+    setSavingManagers(true);
+    try {
+      const response = await apiClient.assignManagers(params.id, selectedManagerIds);
+      if (response.success) {
+        toast.success('Manager access updated.');
+        setShowManagersModal(false);
+        setProperty(response.data);
+      } else {
+        toast.error(response.message || 'Unable to update managers.');
+      }
+    } catch (error) {
+      console.error('Failed to update managers:', error);
+      toast.error('Unable to update managers.');
+    } finally {
+      setSavingManagers(false);
     }
   };
 
@@ -274,12 +317,20 @@ export default function PropertyDetailPage() {
                 <p className="mt-4 text-sm text-slate-500">No owner assigned.</p>
               )}
 
-              {property.managers?.length ? (
-                <div className="mt-5 border-t border-slate-100 pt-4">
+              <div className="mt-5 border-t border-slate-100 pt-4">
+                <div className="flex items-center justify-between gap-3">
                   <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">
                     <ShieldCheck size={13} />
                     Assigned managers
                   </p>
+                  {canManage && (
+                    <button type="button" onClick={openManagersModal} className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 transition hover:text-teal-900">
+                      <UserPlus size={13} />
+                      Assign
+                    </button>
+                  )}
+                </div>
+                {property.managers?.length ? (
                   <ul className="mt-3 space-y-2">
                     {property.managers.map((manager) => (
                       <li key={manager.id} className="text-sm text-slate-700">
@@ -288,8 +339,10 @@ export default function PropertyDetailPage() {
                       </li>
                     ))}
                   </ul>
-                </div>
-              ) : null}
+                ) : (
+                  <p className="mt-3 text-sm text-slate-500">No managers assigned yet.</p>
+                )}
+              </div>
             </section>
           </div>
         </div>
@@ -353,6 +406,62 @@ export default function PropertyDetailPage() {
             </FormField>
           </div>
           <PropertyImageFields files={imageFiles} setFiles={setImageFiles} existing={editFormData} />
+        </form>
+      </Modal>
+
+      <Modal
+        open={showManagersModal}
+        onClose={() => setShowManagersModal(false)}
+        title="Assign managers"
+        description="Choose which manager accounts can open and run this property."
+        size="lg"
+        footer={
+          <>
+            <button type="button" onClick={() => setShowManagersModal(false)} className="btn btn-secondary">Cancel</button>
+            <button type="submit" form="managers-form" disabled={savingManagers} className="btn btn-primary">
+              {savingManagers ? 'Saving...' : 'Save access'}
+            </button>
+          </>
+        }
+      >
+        <form id="managers-form" onSubmit={handleSaveManagers} className="space-y-4">
+          {managersLoading ? (
+            <p className="rounded-lg bg-slate-50 p-4 text-sm text-slate-500">Loading manager accounts…</p>
+          ) : managerUsers.length === 0 ? (
+            <p className="rounded-lg bg-slate-50 p-4 text-sm leading-6 text-slate-500">
+              No manager accounts exist yet. Manager accounts are created by the administrator under
+              <span className="font-semibold"> Admin &rarr; User access</span>.
+            </p>
+          ) : (
+            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+              {managerUsers.map((manager) => {
+                const checked = selectedManagerIds.includes(manager.id);
+                return (
+                  <label
+                    key={manager.id}
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${checked ? 'border-teal-300 bg-teal-50/60' : 'border-slate-200 bg-white hover:border-teal-200'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 accent-teal-600"
+                      checked={checked}
+                      onChange={() =>
+                        setSelectedManagerIds((prev) =>
+                          prev.includes(manager.id)
+                            ? prev.filter((id) => id !== manager.id)
+                            : [...prev, manager.id]
+                        )
+                      }
+                    />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{manager.name}</p>
+                      <p className="text-xs text-slate-400">{manager.email}</p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </form>
       </Modal>
 

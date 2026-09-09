@@ -263,6 +263,10 @@ class ApiClient {
     return this.delete(`/properties/${id}`);
   }
 
+  async assignManagers(id, managerIds) {
+    return this.post(`/properties/${id}/managers`, { manager_ids: managerIds });
+  }
+
   // Units
   async getUnits() {
     return this.get('/units');

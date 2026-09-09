@@ -35,7 +35,7 @@ function formatDate(value) {
 }
 
 export default function TenantsPage() {
-  const { isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
+  const { isAuthenticated, isOwner, isManager, isAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [tenants, setTenants] = useState([]);
@@ -71,6 +71,7 @@ export default function TenantsPage() {
   }, []);
 
   useEffect(() => {
+    if (authLoading) return undefined;
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -84,7 +85,7 @@ export default function TenantsPage() {
       await fetchUsers();
     };
     load();
-  }, [isAuthenticated, isOwner, isManager, isAdmin, router, fetchTenants, fetchUsers]);
+  }, [authLoading, isAuthenticated, isOwner, isManager, isAdmin, router, fetchTenants, fetchUsers]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

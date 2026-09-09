@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Property;
+use App\Models\User;
+use App\Models\UserNotification;
 
 class PropertyController extends ApiController
 {
@@ -121,6 +123,48 @@ class PropertyController extends ApiController
         $property->update($validated);
 
         return $this->successResponse($property, 'Property updated successfully');
+    }
+
+    /**
+     * Assign the managers responsible for a property.
+     */
+    public function managers(Request $request, Property $property)
+    {
+        abort_unless(
+            $request->user()->isAdmin()
+                || ($request->user()->isOwner() && $property->owner_id === $request->user()->id),
+            403,
+            'Only the property owner or an administrator can manage the property team.'
+        );
+
+        $validated = $request->validate([
+            'manager_ids' => 'present|array',
+            'manager_ids.*' => 'integer',
+        ]);
+
+        $managers = User::where('role', 'manager')
+            ->whereIn('id', $validated['manager_ids'])
+            ->pluck('id')
+            ->all();
+
+        $previousIds = $property->managers()->pluck('users.id')->all();
+        $added = array_diff($managers, $previousIds);
+        $removed = array_diff($previousIds, $managers);
+
+        $property->managers()->detach($removed);
+        foreach ($added as $managerId) {
+            $property->managers()->attach($managerId, ['assigned_date' => now()->toDateString()]);
+
+            UserNotification::create([
+                'user_id' => $managerId,
+                'title' => 'Property assigned',
+                'message' => "You have been assigned to manage {$property->name}.",
+            ]);
+        }
+
+        $property->load(['owner', 'units', 'managers', 'expenses']);
+
+        return $this->successResponse($property, 'Managers updated successfully');
     }
 
     /**

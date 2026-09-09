@@ -15,11 +15,28 @@ class UserController extends ApiController
      */
     public function index(Request $request)
     {
+        $user = $request->user();
+
         $role = $request->validate([
             'role' => 'nullable|in:owner,manager,tenant,administrator',
         ])['role'] ?? null;
 
-        if (!$request->user()->isAdmin() && $role !== 'tenant') {
+        // Role availability rules:
+        // - Administrators: any role, or every account when no role is given.
+        // - Owners: tenant accounts (for linking) and manager accounts (for assigning).
+        // - Managers: tenant accounts only (for linking).
+        // - Tenants: only themselves.
+        $permitted = match ($user->role) {
+            'administrator' => null,
+            'owner' => ['tenant', 'manager'],
+            default => ['tenant'],
+        };
+
+        if ($permitted !== null && !in_array($role, $permitted)) {
+            abort(403);
+        }
+
+        if (!$user->isAdmin() && !$role) {
             abort(403);
         }
 
@@ -29,17 +46,12 @@ class UserController extends ApiController
             $query->where('role', $role);
         }
 
-        if (!$request->user()->isAdmin()) {
-            if ($request->user()->isTenant()) {
-                $query->whereKey($request->user()->id);
-            }
-            // Owners and managers may list every user registered with the tenant
-            // role so they can link an existing registration to a tenant profile.
-            // The `tenant_exists` flag tells the UI who is already linked.
+        if ($user->isTenant()) {
+            $query->whereKey($user->id);
         }
-        
+
         $users = $query->withExists('tenant')->get(['id', 'name', 'email', 'role', 'phone']);
-        
+
         return $this->successResponse($users, 'Users retrieved successfully');
     }
 

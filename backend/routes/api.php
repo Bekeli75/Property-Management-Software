@@ -44,6 +44,7 @@ Route::prefix('v1')->group(function () {
         
         // Properties
         Route::apiResource('properties', PropertyController::class);
+        Route::post('properties/{property}/managers', [PropertyController::class, 'managers']);
         
         // Units
         Route::apiResource('units', UnitController::class);

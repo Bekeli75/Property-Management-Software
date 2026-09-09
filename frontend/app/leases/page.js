@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/lib/api';
+import { tenantFull } from '@/lib/tenantLabel';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import FileUpload from '@/components/FileUpload';
 import AppShell from '@/components/AppShell';
@@ -46,7 +47,7 @@ function formatDate(value) {
 }
 
 export default function LeasesPage() {
-  const { isAuthenticated, isOwner, isManager, isAdmin, isTenant } = useAuth();
+  const { isAuthenticated, isOwner, isManager, isAdmin, isTenant, loading: authLoading } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [leases, setLeases] = useState([]);
@@ -114,6 +115,7 @@ export default function LeasesPage() {
   }, []);
 
   useEffect(() => {
+    if (authLoading) return undefined;
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -127,7 +129,7 @@ export default function LeasesPage() {
       }
     };
     load();
-  }, [isAuthenticated, isTenant, router, fetchLeases, fetchTenants, fetchUnits, fetchProperties]);
+  }, [authLoading, isAuthenticated, isTenant, router, fetchLeases, fetchTenants, fetchUnits, fetchProperties]);
 
   const availableUnits = useMemo(() => {
     const base = units.filter((u) => u.status === 'available');
@@ -364,7 +366,7 @@ export default function LeasesPage() {
                 <select className="field-input" required value={formData.tenant_id} onChange={(e) => setFormData({ ...formData, tenant_id: e.target.value })}>
                   <option value="">Select a tenant</option>
                   {tenants.map((tenant) => (
-                    <option key={tenant.id} value={tenant.id}>{tenant.user?.name} ({tenant.user?.email})</option>
+                    <option key={tenant.id} value={tenant.id}>{tenantFull(tenant)}</option>
                   ))}
                 </select>
               </FormField>

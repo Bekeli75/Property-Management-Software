@@ -30,7 +30,7 @@ const emptyForm = {
 };
 
 export default function PropertiesPage() {
-  const { isAuthenticated, isOwner, isManager, isAdmin } = useAuth();
+  const { isAuthenticated, isOwner, isManager, isAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [properties, setProperties] = useState([]);
@@ -57,6 +57,7 @@ export default function PropertiesPage() {
   }, [toast]);
 
   useEffect(() => {
+    if (authLoading) return undefined;
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -67,7 +68,7 @@ export default function PropertiesPage() {
     }
     const load = async () => { await fetchProperties(); };
     load();
-  }, [isAuthenticated, isOwner, isManager, isAdmin, router, fetchProperties]);
+  }, [authLoading, isAuthenticated, isOwner, isManager, isAdmin, router, fetchProperties]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
