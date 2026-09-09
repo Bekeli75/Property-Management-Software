@@ -32,14 +32,13 @@ class UserController extends ApiController
         if (!$request->user()->isAdmin()) {
             if ($request->user()->isTenant()) {
                 $query->whereKey($request->user()->id);
-            } else {
-                // Owners and managers may list any registered (yet unlinked) tenant user so
-                // they can create the tenant profile needed before a lease exists.
-                $query->where('role', 'tenant')->whereDoesntHave('tenant');
             }
+            // Owners and managers may list every user registered with the tenant
+            // role so they can link an existing registration to a tenant profile.
+            // The `tenant_exists` flag tells the UI who is already linked.
         }
         
-        $users = $query->get(['id', 'name', 'email', 'role', 'phone']);
+        $users = $query->withExists('tenant')->get(['id', 'name', 'email', 'role', 'phone']);
         
         return $this->successResponse($users, 'Users retrieved successfully');
     }

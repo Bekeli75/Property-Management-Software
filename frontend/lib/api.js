@@ -297,6 +297,14 @@ class ApiClient {
     return this.post('/tenants', data);
   }
 
+  async linkTenantUser(tenantId, userId) {
+    return this.patch(`/tenants/${tenantId}`, { user_id: userId });
+  }
+
+  async unlinkTenantUser(tenantId) {
+    return this.patch(`/tenants/${tenantId}`, { user_id: null });
+  }
+
   async deleteTenant(id) {
     return this.delete(`/tenants/${id}`);
   }

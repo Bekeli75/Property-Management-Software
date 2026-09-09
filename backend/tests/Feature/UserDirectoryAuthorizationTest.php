@@ -15,7 +15,7 @@ class UserDirectoryAuthorizationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_owner_sees_only_unlinked_registered_tenants_for_onboarding(): void
+    public function test_owner_lists_registered_tenant_users_with_link_flag(): void
     {
         $owner = User::factory()->create(['role' => 'owner']);
         $otherOwner = User::factory()->create(['role' => 'owner']);
@@ -49,8 +49,11 @@ class UserDirectoryAuthorizationTest extends TestCase
 
         $this->getJson('/api/v1/users?role=tenant')
             ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $unlinkedTenantUser->id);
+            ->assertJsonCount(3, 'data')
+            ->assertJsonFragment(['id' => $unlinkedTenantUser->id, 'tenant_exists' => false])
+            ->assertJsonFragment(['id' => $linkedTenantUser->id, 'tenant_exists' => true])
+            ->assertJsonFragment(['id' => $hiddenTenantUser->id, 'tenant_exists' => true])
+            ->assertJsonMissing(['id' => $owner->id]);
     }
 
     public function test_tenant_cannot_list_other_tenant_accounts(): void

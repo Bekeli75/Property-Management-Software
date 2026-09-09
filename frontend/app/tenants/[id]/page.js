@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/lib/api';
 import AppShell from '@/components/AppShell';
 import AuthGuard from '@/components/AuthGuard';
 import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
+import FormField from '@/components/ui/FormField';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import {
   ArrowLeft,
@@ -17,6 +21,9 @@ import {
   Banknote,
   Wrench,
   ChevronRight,
+  Link2,
+  Unlink,
+  UserPlus,
 } from 'lucide-react';
 
 function formatDate(value) {
@@ -32,35 +39,54 @@ function formatMoney(value) {
 export default function TenantDetailPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const params = useParams();
   const [tenant, setTenant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [users, setUsers] = useState([]);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkUserId, setLinkUserId] = useState('');
+  const [linkSaving, setLinkSaving] = useState(false);
+  const [confirmUnlink, setConfirmUnlink] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) router.replace('/login');
   }, [authLoading, isAuthenticated, router]);
 
+  const loadTenant = useCallback(async () => {
+    try {
+      const response = await apiClient.getTenant(params.id);
+      if (response.success) setTenant(response.data);
+      else setError(response.message || 'Unable to load this tenant.');
+    } catch (err) {
+      console.error('Failed to fetch tenant:', err);
+      setError('Unable to load this tenant.');
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
+
+  const loadUsers = useCallback(async () => {
+    try {
+      const response = await apiClient.getUsers('tenant');
+      if (response.success) setUsers(response.data);
+    } catch (err) {
+      console.error('Failed to fetch tenant users:', err);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) return undefined;
     let active = true;
-
-    const load = async () => {
-      try {
-        const response = await apiClient.getTenant(params.id);
-        if (active && response.success) setTenant(response.data);
-        else if (active) setError(response.message || 'Unable to load this tenant.');
-      } catch (err) {
-        console.error('Failed to fetch tenant:', err);
-        if (active) setError('Unable to load this tenant.');
-      } finally {
-        if (active) setLoading(false);
-      }
+    const init = async () => {
+      await loadTenant();
+      await loadUsers();
     };
-
-    load();
+    if (active) init();
     return () => { active = false; };
-  }, [isAuthenticated, params.id]);
+  }, [isAuthenticated, loadTenant, loadUsers]);
 
   if (authLoading || loading) {
     return (
@@ -89,6 +115,47 @@ export default function TenantDetailPage() {
   const leases = tenant.leases || [];
   const payments = tenant.payments || [];
   const maintenance = tenant.maintenanceRequests || [];
+
+  const handleLinkUser = async (e) => {
+    e.preventDefault();
+    if (!linkUserId) return;
+    setLinkSaving(true);
+    try {
+      const response = await apiClient.linkTenantUser(tenant.id, linkUserId);
+      if (response.success) {
+        toast.success('Tenant user linked.');
+        setShowLinkModal(false);
+        setLinkUserId('');
+        await loadTenant();
+      } else {
+        toast.error(response.message || 'Unable to link that user.');
+      }
+    } catch (err) {
+      console.error('Failed to link user:', err);
+      toast.error(err.message || 'Unable to link that user.');
+    } finally {
+      setLinkSaving(false);
+    }
+  };
+
+  const handleUnlinkUser = async () => {
+    setUnlinking(true);
+    try {
+      const response = await apiClient.unlinkTenantUser(tenant.id);
+      if (response.success) {
+        toast.success('Tenant user unlinked.');
+        setConfirmUnlink(false);
+        await loadTenant();
+      } else {
+        toast.error(response.message || 'Unable to unlink that user.');
+      }
+    } catch (err) {
+      console.error('Failed to unlink user:', err);
+      toast.error(err.message || 'Unable to unlink that user.');
+    } finally {
+      setUnlinking(false);
+    }
+  };
 
   return (
     <AuthGuard roles={['administrator', 'owner', 'manager']}>
@@ -223,6 +290,46 @@ export default function TenantDetailPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             <section className="card p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="page-eyebrow">Workspace link</p>
+                  <h2 className="mt-1 text-lg font-semibold text-slate-950">Linked account</h2>
+                </div>
+                {tenant.user ? (
+                  <button type="button" onClick={() => setConfirmUnlink(true)} className="btn btn-secondary py-2 text-xs">
+                    <Unlink size={14} />
+                    Unlink
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => setShowLinkModal(true)} className="btn btn-primary py-2 text-xs">
+                    <UserPlus size={14} />
+                    Link user
+                  </button>
+                )}
+              </div>
+
+              {tenant.user ? (
+                <div className="mt-4">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-slate-900"><Link2 size={15} className="text-teal-700" /> {tenant.user.name}</p>
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><Mail size={12} /> {tenant.user.email || 'No email'}</p>
+                  {tenant.user.phone && (
+                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500"><Phone size={12} /> {tenant.user.phone}</p>
+                  )}
+                  <p className="mt-3 text-xs leading-5 text-slate-500">
+                    This user signs in to the tenant workspace and manages this tenancy, payments and maintenance.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <Badge status="inactive" className="bg-amber-50 text-amber-700" />
+                  <p className="mt-3 text-sm leading-6 text-slate-600">
+                    No user account is linked to this profile yet. Link a user who has already registered with the tenant role so they can use the tenant workspace.
+                  </p>
+                </div>
+              )}
+            </section>
+
+            <section className="card p-6">
               <p className="page-eyebrow">Identity</p>
               <h2 className="mt-1 text-lg font-semibold text-slate-950">Details</h2>
               <dl className="mt-4 space-y-3">
@@ -279,6 +386,45 @@ export default function TenantDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Link user modal */}
+        <Modal
+          open={showLinkModal}
+          onClose={() => setShowLinkModal(false)}
+          title="Link a tenant user"
+          description="Select a user who has already registered with the tenant role."
+          footer={
+            <>
+              <button type="button" onClick={() => setShowLinkModal(false)} className="btn btn-secondary">Cancel</button>
+              <button type="submit" form="link-user-form" disabled={linkSaving || !linkUserId} className="btn btn-primary">
+                {linkSaving ? 'Linking...' : 'Link user'}
+              </button>
+            </>
+          }
+        >
+          <form id="link-user-form" onSubmit={handleLinkUser} className="space-y-5">
+            <FormField label="Registered tenant user" required hint="Users already linked to another tenant profile are disabled.">
+              <select className="field-input" required value={linkUserId} onChange={(e) => setLinkUserId(e.target.value)}>
+                <option value="">Select a user</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id} disabled={u.tenant_exists}>
+                    {u.name} ({u.email}){u.tenant_exists ? ' — already linked' : ''}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+          </form>
+        </Modal>
+
+        <ConfirmDialog
+          open={confirmUnlink}
+          title="Unlink this user?"
+          message="The tenant user will lose access to this tenant workspace. Existing leases, payments and maintenance records stay on the profile."
+          confirmLabel="Unlink"
+          loading={unlinking}
+          onCancel={() => setConfirmUnlink(false)}
+          onConfirm={handleUnlinkUser}
+        />
       </main>
     </AppShell>
     </AuthGuard>

@@ -244,7 +244,9 @@ export default function TenantsPage() {
             <select className="field-input" required value={formData.user_id} onChange={(e) => setFormData({ ...formData, user_id: e.target.value })}>
               <option value="">Select a user</option>
               {users.map((u) => (
-                <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                <option key={u.id} value={u.id} disabled={u.tenant_exists}>
+                  {u.name} ({u.email}){u.tenant_exists ? ' — already linked' : ''}
+                </option>
               ))}
             </select>
           </FormField>

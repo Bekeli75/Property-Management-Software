@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Tenant;
+use App\Models\User;
 
 class TenantController extends ApiController
 {
@@ -57,6 +58,10 @@ class TenantController extends ApiController
             'notes' => 'nullable|string',
         ]);
 
+        $target = User::find($validated['user_id']);
+        abort_unless($target->isTenant(), 422, 'Only user accounts registered with the tenant role can be linked.');
+        abort_unless(!$target->tenant, 422, 'That user is already linked to a tenant profile.');
+
         $tenant = Tenant::create($validated);
 
         return $this->successResponse($tenant, 'Tenant created successfully', 201);
@@ -81,6 +86,7 @@ class TenantController extends ApiController
         $this->authorizeTenantAccess($request->user(), $tenant);
 
         $validated = $request->validate([
+            'user_id' => 'nullable|exists:users,id',
             'id_number' => 'sometimes|required|string|unique:tenants,id_number,' . $tenant->id,
             'id_type' => 'sometimes|required|string|max:50',
             'date_of_birth' => 'nullable|date',
@@ -92,6 +98,12 @@ class TenantController extends ApiController
             'status' => 'sometimes|required|in:active,inactive,blacklisted',
             'notes' => 'nullable|string',
         ]);
+
+        if ($request->has('user_id') && $validated['user_id'] !== null) {
+            $target = User::find($validated['user_id']);
+            abort_unless($target->isTenant(), 422, 'Only user accounts registered with the tenant role can be linked.');
+            abort_unless(!$target->tenant || $target->tenant->id === $tenant->id, 422, 'That user is already linked to another tenant profile.');
+        }
 
         $tenant->update($validated);
 
