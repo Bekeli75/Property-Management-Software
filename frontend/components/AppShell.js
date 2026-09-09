@@ -44,7 +44,7 @@ const navGroups = [
     items: [
       { label: 'Payments', path: '/payments', icon: CreditCard },
       { label: 'Maintenance', path: '/maintenance', icon: Wrench },
-      { label: 'Reports', path: '/reports', icon: BarChart3, roles: ['administrator', 'owner', 'manager'] },
+      { label: 'Reports', path: '/reports', icon: BarChart3, roles: ['administrator', 'owner'] },
     ],
   },
   {
@@ -64,7 +64,7 @@ const navGroups = [
 ];
 
 const adminItems = [
-  { label: 'User access', path: '/admin/users', icon: Shield },
+  { label: 'User access', path: '/admin/users', icon: Shield, roles: ['administrator'] },
 ];
 
 const roleLabels = {
@@ -72,6 +72,13 @@ const roleLabels = {
   owner: 'Property owner',
   manager: 'Property manager',
   tenant: 'Tenant',
+};
+
+const tenantGroupLabels = {
+  Management: 'My tenancy',
+  Operations: 'My activity',
+  Communication: 'Communication',
+  Account: 'Account',
 };
 
 export default function AppShell({ children }) {
@@ -93,9 +100,20 @@ export default function AppShell({ children }) {
   const visibleGroups = navGroups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.roles || item.roles.includes(user.role)),
+      items: group.items
+        .filter((item) => !item.roles || item.roles.includes(user.role))
+        .map((item) =>
+          user.role === 'tenant' && item.path === '/leases'
+            ? { ...item, label: 'My lease' }
+            : item
+        ),
     }))
-    .filter((group) => group.items.length > 0);
+    .filter((group) => group.items.length > 0)
+    .map((group) =>
+      user.role === 'tenant'
+        ? { ...group, label: tenantGroupLabels[group.label] || group.label }
+        : group
+    );
 
   const visibleAdminItems = adminItems.filter((item) => !item.roles || item.roles.includes(user.role));
 

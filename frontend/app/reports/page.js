@@ -119,7 +119,7 @@ export default function ReportsPage() {
   ];
 
   return (
-    <AuthGuard>
+    <AuthGuard roles={['administrator', 'owner']}>
       <AppShell>
       <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
         <PageHeader
