@@ -1,27 +1,20 @@
-# Wasmer Edge app config — Propentra API (backend/)
-# Used by `wasmer deploy` (and optional for dashboard imports). Secrets belong in
-# `wasmer app secrets`, NOT here. See deploy/README.md and docs/DEPLOYMENT.md.
+# Wasmer Edge app config - Propentra API (backend/)
 #
-# Database: `wasmer deploy` will prompt for a region that supports databases.
-# (Needs a single `locality.regions` entry, e.g. fr-roub1; pick from the prompt.)
+# Format: `wasmer.io/App.v1` entity. The git-builder parses this exact schema:
+#   kind  -> entity kind (required)
+#   meta  -> EntityMeta { name } (required)
+#   spec  -> AppV1Spec { aliases, workload } (required)
+#   spec.workload.source -> the webc package to run; "." = the package built
+#                           from this repo in this build (required)
+#   spec.workload.capabilities -> runtime capabilities (optional)
+#
+# Env vars, the managed MySQL database, and the region are configured in the
+# Wasmer Dashboard (App -> Settings), NOT in this file. See docs/DEPLOYMENT.md.
 kind: wasmer.io/App.v1
-
-capabilities:
-  database:
-    engine: mysql
-
-locality:
-  regions:
-    - fr-roub1
-
-env:
-  APP_ENV: "production"
-  APP_DEBUG: "false"
-  # No long-running queue worker on serverless — process jobs inline.
-  QUEUE_CONNECTION: "sync"
-  SESSION_DRIVER: "database"
-  CACHE_STORE: "database"
-  # Serverless logs go to stdout/stderr, not a local file.
-  LOG_CHANNEL: "stderr"
-  FILESYSTEM_DISK: "public"
-  SANCTUM_TOKEN_EXPIRATION: "60"
+meta:
+  name: propentra-api
+spec:
+  aliases: []
+  workload:
+    source: "."
+    capabilities: {}
