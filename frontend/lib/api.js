@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://propentra-api.onrender.com/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://propentra-api.onrender.com/api/v1';
 
 class ApiClient {
   constructor() {
