@@ -724,51 +724,51 @@ select:focus-visible {
 }
 
 .signal-good {
-  background: rgba(16, 185, 129, 0.12);
-  color: #059669;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid var(--success-border);
 }
 
 .signal-warn {
-  background: rgba(245, 158, 11, 0.12);
-  color: #d97706;
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: var(--warning-soft);
+  color: var(--warning);
+  border: 1px solid var(--warning-border);
 }
 
 .signal-bad {
-  background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
 }
 
 .signal-neutral {
-  background: rgba(100, 116, 139, 0.12);
-  color: #475569;
-  border: 1px solid rgba(100, 116, 139, 0.2);
+  background: var(--slate-soft);
+  color: var(--slate);
+  border: 1px solid var(--slate-border);
 }
 
 .dark .signal-good {
-  background: rgba(16, 185, 129, 0.2);
-  color: #34d399;
-  border-color: rgba(16, 185, 129, 0.3);
+  background: var(--success-soft);
+  color: var(--success-light);
+  border-color: var(--success-border);
 }
 
 .dark .signal-warn {
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.3);
+  background: var(--warning-soft);
+  color: var(--warning-light);
+  border-color: var(--warning-border);
 }
 
 .dark .signal-bad {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
-  border-color: rgba(239, 68, 68, 0.3);
+  background: var(--danger-soft);
+  color: var(--danger-light);
+  border-color: var(--danger-border);
 }
 
 .dark .signal-neutral {
-  background: rgba(148, 163, 184, 0.2);
-  color: #94a3b8;
-  border-color: rgba(148, 163, 184, 0.3);
+  background: var(--slate-soft);
+  color: var(--slate-light);
+  border-color: var(--slate-border);
 }
 
 /* Card signal badge position */
