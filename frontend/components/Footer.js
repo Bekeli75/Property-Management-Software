@@ -6,44 +6,36 @@ import Logo from '@/components/Logo';
 
 const footerLinks = {
   Product: [
-    { label: 'Properties', href: '/properties' },
-    { label: 'Tenants', href: '/tenants' },
-    { label: 'Leases', href: '/leases' },
-    { label: 'Payments', href: '/payments' },
-    { label: 'Maintenance', href: '/maintenance' },
-    { label: 'Reports', href: '/reports' },
+    { label: 'Properties', href: '/properties', description: 'Manage properties & units' },
+    { label: 'Tenants', href: '/tenants', description: 'Tenant management' },
+    { label: 'Leases', href: '/leases', description: 'Lease agreements & terms' },
+    { label: 'Payments', href: '/payments', description: 'Rent collection & history' },
   ],
   Company: [
-    { label: 'About Us', href: '/about' },
-    { label: 'Careers', href: '/careers' },
-    { label: 'Press', href: '/press' },
-    { label: 'Blog', href: '/blog' },
-    { label: 'Partners', href: '/partners' },
+    { label: 'About Us', href: '/about', description: 'Our mission & team' },
+    { label: 'Careers', href: '/careers', description: 'Join our team' },
+    { label: 'Contact', href: '/contact', description: 'Get in touch' },
   ],
   Resources: [
-    { label: 'Help Center', href: '/help' },
-    { label: 'API Docs', href: '/docs' },
-    { label: 'Community', href: '/community' },
-    { label: 'Status', href: '/status' },
-    { label: 'Changelog', href: '/changelog' },
+    { label: 'Help Center', href: '/help', description: 'Guides & FAQs' },
+    { label: 'API Docs', href: '/docs', description: 'Developer documentation' },
+    { label: 'Status', href: '/status', description: 'System status' },
   ],
   Legal: [
-    { label: 'Privacy Policy', href: '/privacy' },
-    { label: 'Terms of Service', href: '/terms' },
-    { label: 'Cookie Policy', href: '/cookies' },
-    { label: 'Security', href: '/security' },
-    { label: 'GDPR', href: '/gdpr' },
+    { label: 'Privacy Policy', href: '/privacy', description: 'Data protection' },
+    { label: 'Terms of Service', href: '/terms', description: 'Terms & conditions' },
+    { label: 'Security', href: '/security', description: 'Security practices' },
   ],
 };
 
-const socialLinks = [
+const footerSocialLinks = [
   { icon: MessageSquare, href: 'https://twitter.com/propentra', label: 'Twitter' },
   { icon: Code, href: 'https://github.com/propentra', label: 'GitHub' },
   { icon: Heart, href: 'https://linkedin.com/company/propentra', label: 'LinkedIn' },
   { icon: Globe, href: 'https://facebook.com/propentra', label: 'Facebook' },
 ];
 
-const features = [
+const footerFeatures = [
   { icon: Building2, label: 'Properties' },
   { icon: Users, label: 'Tenants' },
   { icon: FileText, label: 'Leases' },
@@ -58,7 +50,7 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+    <footer className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950">
       <div className="mx-auto max-w-[1500px] px-5 py-10 sm:px-8 sm:py-14">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-6">
           {/* Brand */}
@@ -71,7 +63,7 @@ export default function Footer() {
               Professional property management platform for owners, managers, and tenants. Streamline operations, automate rent collection, and delight your tenants.
             </p>
             <div className="flex gap-4">
-              {socialLinks.map((item) => (
+              {footerSocialLinks.map((item) => (
                 <a
                   key={item.label}
                   href={item.href}
@@ -92,8 +84,9 @@ export default function Footer() {
             <ul className="mt-4 space-y-3" role="list">
               {footerLinks.Product.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} className="text-sm text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition">
-                    {item.label}
+                  <Link href={item.href} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition group">
+                    <span>{item.label}</span>
+                    <ArrowRight size={12} className="text-slate-400 dark:text-slate-500 group-hover:text-teal-500 transition-colors" />
                   </Link>
                 </li>
               ))}
@@ -106,8 +99,9 @@ export default function Footer() {
             <ul className="mt-4 space-y-3" role="list">
               {footerLinks.Company.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} className="text-sm text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition">
-                    {item.label}
+                  <Link href={item.href} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition group">
+                    <span>{item.label}</span>
+                    <ArrowRight size={12} className="text-slate-400 dark:text-slate-500 group-hover:text-teal-500 transition-colors" />
                   </Link>
                 </li>
               ))}
@@ -120,8 +114,9 @@ export default function Footer() {
             <ul className="mt-4 space-y-3" role="list">
               {footerLinks.Resources.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} className="text-sm text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition">
-                    {item.label}
+                  <Link href={item.href} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition group">
+                    <span>{item.label}</span>
+                    <ArrowRight size={12} className="text-slate-400 dark:text-slate-500 group-hover:text-teal-500 transition-colors" />
                   </Link>
                 </li>
               ))}
@@ -134,8 +129,9 @@ export default function Footer() {
             <ul className="mt-4 space-y-3" role="list">
               {footerLinks.Legal.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} className="text-sm text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition">
-                    {item.label}
+                  <Link href={item.href} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition group">
+                    <span>{item.label}</span>
+                    <ArrowRight size={12} className="text-slate-400 dark:text-slate-500 group-hover:text-teal-500 transition-colors" />
                   </Link>
                 </li>
               ))}
@@ -144,10 +140,10 @@ export default function Footer() {
         </div>
 
         {/* Features bar */}
-        <div className="mt-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6">
+        <div className="mt-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 p-6">
           <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Everything you need to manage properties efficiently</p>
           <div className="mt-4 flex flex-wrap items-center gap-4">
-            {features.map((item) => (
+            {footerFeatures.map((item) => (
               <Link
                 key={item.label}
                 href={`/${item.label.toLowerCase()}`}
