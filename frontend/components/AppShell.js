@@ -27,6 +27,7 @@ import Logo from '@/components/Logo';
 import GlobalSearch from '@/components/GlobalSearch';
 import NotificationPopover from '@/components/NotificationPopover';
 import Footer from '@/components/Footer';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const navGroups = [
   {
@@ -154,23 +155,14 @@ export default function AppShell({ children }) {
 
       <div className="shrink-0 border-t border-white/[0.06] p-4">
         <div className="rounded-xl bg-white/[0.05] p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-500/20 text-sm font-bold text-teal-300">
-                {user.name?.charAt(0)?.toUpperCase() || '?'}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">{user.name}</p>
-                <p className="mt-0.5 text-xs capitalize text-teal-400">{roleLabels[user.role] || user.role}</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-500/20 text-sm font-bold text-teal-300">
+              {user.name?.charAt(0)?.toUpperCase() || '?'}
             </div>
-            <button
-              onClick={toggleTheme}
-              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.05] text-slate-400 hover:bg-white/[0.1] hover:text-teal-300 transition"
-            >
-              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-            </button>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+              <p className="mt-0.5 text-xs capitalize text-teal-400">{roleLabels[user.role] || user.role}</p>
+            </div>
           </div>
         </div>
         <button
@@ -232,6 +224,7 @@ return (
                 <GlobalSearch />
               </div>
               <NotificationPopover />
+              <ThemeToggle />
               <button
                 onClick={handleLogout}
                 className="btn btn-secondary shrink-0 px-3 py-2 text-sm md:hidden"
