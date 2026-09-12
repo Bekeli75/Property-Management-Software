@@ -1,11 +1,11 @@
-# Propentra Deployment Guide (Render)
+# Propentra Deployment Guide (Render + Vercel)
 
 Two deployables:
 
-- **frontend/** – Next.js app (JavaScript). Static + SSR via Render (free Web Service tier).
+- **frontend/** – Next.js app (JavaScript). Static + SSR via **Vercel** (free Hobby tier).
 - **backend/** – Laravel 11 API (Sanctum token auth, Chapa payments).
 
-The backend runs on **Render** — a modern cloud platform with native Laravel support, managed PostgreSQL/MySQL, automatic SSL, custom domains, and GitHub CI/CD. Free tier includes 750 hours/month, 512 MB RAM, shared CPU, and a managed MySQL database.
+The backend runs on **Render** — a modern cloud platform with native Laravel support (Docker), managed MySQL, automatic SSL, custom domains, and GitHub CI/CD. Free tier includes 750 hours/month, 512 MB RAM, shared CPU, and a managed MySQL database.
 
 ## Backend — Render (free tier)
 
@@ -21,7 +21,7 @@ The backend runs on **Render** — a modern cloud platform with native Laravel s
    - **Region**: Oregon (US West) or Frankfurt (EU) — pick closest to users
    - **Branch**: `main`
    - **Root Directory**: `backend` (if using monorepo) or leave blank (if separate repo)
-   - **Runtime**: `Docker` (recommended) or `Node` → but we'll use Docker for Laravel
+   - **Runtime**: `Docker` (recommended for Laravel)
 
 ### 3. Create `render.yaml` (Infrastructure as Code)
 Add this file at repo root (or `backend/render.yaml`):
@@ -220,9 +220,9 @@ stderr_logfile_maxbytes=0
 | `CACHE_STORE` | `database` | |
 | `LOG_CHANNEL` | `stderr` | |
 | `FILESYSTEM_DISK` | `public` | |
-| `FRONTEND_URL` | `https://your-frontend.onrender.com` | **Secret** |
-| `CORS_ALLOWED_ORIGINS` | `https://your-frontend.onrender.com` | **Secret** |
-| `SANCTUM_STATEFUL_DOMAINS` | `your-frontend.onrender.com` | **Secret** |
+| `FRONTEND_URL` | `https://your-frontend.vercel.app` | **Secret** |
+| `CORS_ALLOWED_ORIGINS` | `https://your-frontend.vercel.app` | **Secret** |
+| `SANCTUM_STATEFUL_DOMAINS` | `your-frontend.vercel.app` | **Secret** |
 | `CHAPA_SECRET_KEY` | Your Chapa key | **Secret** |
 | `CHAPA_TEST_MODE` | `true` | |
 
@@ -254,22 +254,26 @@ curl -i https://your-api.onrender.com/api/v1/auth/me     # 401 JSON
 curl -i https://your-api.onrender.com/storage/foobar.png # 404
 ```
 
-## Frontend — Render (free tier)
+## Frontend — Vercel (free tier)
 
-### 1. Create Render Web Service for Frontend
-1. Render Dashboard → **New +** → **Web Service**
-2. Connect same GitHub repo
+### 1. Create Vercel Project
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard) → **Add New...** → **Project**
+2. Import the GitHub repo (`Bekeli75/Property-Management-Software`)
 3. Configure:
-   - **Name**: `propentra-frontend`
-   - **Region**: Same as backend
-   - **Branch**: `main`
+   - **Framework Preset**: Next.js (auto-detected)
    - **Root Directory**: `frontend`
-   - **Runtime**: `Node`
-   - **Build Command**: `npm ci && npm run build`
-   - **Start Command**: `npm start`
-   - **Plan**: Free
+   - **Build Command**: `npm run build` (or leave default)
+   - **Output Directory**: `.next` (or leave default)
+   - **Install Command**: `npm ci`
 
-### 2. `next.config.mjs` (ensure output: standalone)
+### 2. Environment Variables (Vercel Project Settings → Environment Variables)
+| Variable | Production Value |
+|----------|------------------|
+| `NEXT_PUBLIC_API_URL` | `https://your-api.onrender.com/api/v1` |
+
+> **Critical**: Must end with `/api/v1`. The frontend does **not** append `/v1`.
+
+### 3. `next.config.mjs` (ensure output: standalone for optimal Vercel)
 ```js
 // frontend/next.config.mjs
 /** @type {import('next').NextConfig} */
@@ -281,30 +285,30 @@ const nextConfig = {
 export default nextConfig;
 ```
 
-### 3. Environment Variable
-| Variable | Value |
-|----------|-------|
-| `NEXT_PUBLIC_API_URL` | `https://your-api.onrender.com/api/v1` |
+### 4. `vercel.json` (optional, for explicit config)
+```json
+{
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
+  "framework": "nextjs",
+  "regions": ["iad1"]
+}
+```
 
-> Must end with `/api/v1`. The frontend does **not** append `/v1`.
-
-### 4. Deploy
-- Push to `main` → Render auto-deploys both services
-- Frontend gets URL like `https://propentra-frontend.onrender.com`
-- Backend gets URL like `https://propentra-api.onrender.com`
-
-## Custom Domains (optional)
-- Render Dashboard → Service → Settings → **Custom Domains**
-- Add your domain, SSL issued automatically
+### 5. Deploy
+- Push to `main` → Vercel auto-deploys on every push
+- Preview deployments for PRs, production for `main`
+- Custom domain in Vercel Settings → Domains
 
 ## CORS / Cross-Origin Checklist
-- `CORS_ALLOWED_ORIGINS` = exact frontend origin (no trailing slash)
-- `SANCTUM_STATEFUL_DOMAINS` = frontend domain only
-- Chapa callback `POST /api/v1/payments/chapa/callback` must be publicly reachable (outside `auth:sanctum`)
+- **Backend (Render)**: Set `CORS_ALLOWED_ORIGINS` = exact Vercel frontend URL (e.g., `https://propentra.vercel.app`)
+- **Backend (Render)**: Set `SANCTUM_STATEFUL_DOMAINS` = Vercel frontend domain only (e.g., `propentra.vercel.app`)
+- **Chapa**: Keep `CHAPA_TEST_MODE=true` with test keys for launch; flip to `false` with live keys only after merchant approval + UAT. The callback `POST /api/v1/payments/chapa/callback` is outside `auth:sanctum` by design and must be publicly reachable.
 
 ## Secrets Management
-- Never commit `.env` or `frontend/.env.local`
-- Use Render Dashboard → Environment → **Secret Files** or **Environment Variables** (mark as secret)
+- **Never commit** `.env` or `frontend/.env.local`
+- **Render**: Use Dashboard → Environment → mark secrets as "Secret"
+- **Vercel**: Use Project Settings → Environment Variables → mark as "Production"
 - Rotate `APP_KEY` and `APP_BOOTSTRAP_TOKEN` per environment
 
 ## Pre-Deploy Checklist
@@ -316,13 +320,6 @@ cd frontend && npm run lint && npm run build && npm run test
 cd backend && php artisan test
 ```
 
-## Repository Hygiene
-- Never commit `.env` files
-- Use `render.yaml` for IaC (infrastructure as code)
-- See `docs/UAT.md` for pre-release journey checks
-
----
-
 ## Quick Start (One-time setup)
 ```bash
 # 1. Push to GitHub
@@ -330,18 +327,20 @@ git push origin main
 
 # 2. In Render Dashboard:
 #    - New Web Service → backend (Docker, rootDir: backend)
-#    - New Web Service → frontend (Node, rootDir: frontend)
 #    - New Database → MySQL (free)
+#    - Set env vars (see table above)
 
-# 3. Set env vars in each service (see tables above)
+# 3. In Vercel Dashboard:
+#    - New Project → Import repo → Root Directory: frontend
+#    - Set NEXT_PUBLIC_API_URL = https://your-api.onrender.com/api/v1
 
-# 3. Deploy → Render builds & deploys automatically
+# 4. Deploy → Both auto-deploy on push to main
 
-# 4. Bootstrap backend:
+# 5. Bootstrap backend:
 curl "https://your-api.onrender.com/__bootstrap?token=YOUR_TOKEN"
 
-# 5. Verify:
+# 6. Verify:
 curl -i https://your-api.onrender.com/api/v1/auth/me
 ```
 
-**Done.** 🎉 Your Propentra app is live on Render free tier.
+**Done.** 🎉 Your Propentra app is live: **Backend on Render**, **Frontend on Vercel**.
