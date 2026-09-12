@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <linearGradient id="primary" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="25%" cy="0%" r="70%">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="100%" cy="100%" r="60%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect fill="url(#bg)" width="1400" height="900"/>
+  <g transform="translate(500, 80)">
+    <rect x="0" y="0" width="400" height="720" rx="16" fill="url(#cardGrad)" stroke="#e2e8f0" stroke-width="1"/>
+    <ellipse cx="200" cy="50" rx="150" ry="100" fill="url(#glow1)"/>
+    <ellipse cx="350" cy="650" rx="120" ry="80" fill="url(#glow2)"/>
+    <text x="200" y="80" font-family="system-ui" font-size="24" font-weight="bold" fill="#5eead4" text-anchor="middle">Propentra</text>
+    <text x="200" y="105" font-family="system-ui" font-size="10" fill="#5eead4" text-anchor="middle">Property Management</text>
+    <text x="200" y="160" font-family="system-ui" font-size="11" font-weight="600" fill="#14b8a6" text-anchor="middle" letter-spacing="0.18em">TENANT REGISTRATION</text>
+    <text x="200" y="195" font-family="system-ui" font-size="28" font-weight="700" fill="#0f172a" text-anchor="middle">Create your account</text>
+    <text x="200" y="220" font-family="system-ui" font-size="14" fill="#64748b" text-anchor="middle">Register to access your lease, pay rent, and request maintenance.</text>
+    <!-- Full Name -->
+    <rect x="40" y="250" width="320" height="52" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="60" y="270" font-family="system-ui" font-size="12" fill="#94a3b8">e.g. Sara Ahmed</text>
+    <text x="60" y="240" font-family="system-ui" font-size="11" font-weight="600" fill="#0f172a">Full name</text>
+    <!-- Email -->
+    <rect x="40" y="320" width="320" height="52" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="60" y="340" font-family="system-ui" font-size="12" fill="#94a3b8">you@example.com</text>
+    <text x="60" y="310" font-family="system-ui" font-size="11" font-weight="600" fill="#0f172a">Email address</text>
+    <!-- Phone -->
+    <rect x="40" y="390" width="320" height="52" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="60" y="410" font-family="system-ui" font-size="12" fill="#94a3b8">+251 911 234 567</text>
+    <text x="60" y="360" font-family="system-ui" font-size="11" font-weight="600" fill="#0f172a">Phone number (optional)</text>
+    <!-- Password -->
+    <rect x="40" y="460" width="320" height="52" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="60" y="480" font-family="system-ui" font-size="12" fill="#94a3b8">At least 8 characters</text>
+    <text x="60" y="450" font-family="system-ui" font-size="11" font-weight="600" fill="#0f172a">Password</text>
+    <!-- Confirm Password -->
+    <rect x="40" y="530" width="320" height="52" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="60" y="550" font-family="system-ui" font-size="12" fill="#94a3b8">Repeat your password</text>
+    <text x="60" y="500" font-family="system-ui" font-size="11" font-weight="600" fill="#0f172a">Confirm password</text>
+    <!-- Create Account Button -->
+    <rect x="40" y="600" width="320" height="52" rx="8" fill="url(#primary)"/>
+    <text x="200" y="635" font-family="system-ui" font-size="14" font-weight="700" fill="white" text-anchor="middle">Create account</text>
+    <!-- Login Link -->
+    <text x="200" y="685" font-family="system-ui" font-size="13" fill="#64748b" text-anchor="middle">Already have an account? <a href="#" fill="#14b8a6" font-weight="600">Sign in here</a></text>
+  </g>
+</svg>

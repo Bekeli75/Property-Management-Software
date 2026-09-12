@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <linearGradient id="primary" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="25%" cy="0%" r="70%">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="100%" cy="100%" r="60%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect fill="url(#bg)" width="1400" height="900"/>
+  <!-- Centered Card -->
+  <g transform="translate(500, 150)">
+    <rect x="0" y="0" width="400" height="580" rx="16" fill="url(#cardGrad)" stroke="#e2e8f0" stroke-width="1"/>
+    <ellipse cx="200" cy="50" rx="150" ry="100" fill="url(#glow1)"/>
+    <ellipse cx="350" cy="500" rx="120" ry="80" fill="url(#glow2)"/>
+    <!-- Logo -->
+    <text x="200" y="80" font-family="system-ui" font-size="24" font-weight="bold" fill="#5eead4" text-anchor="middle">Propentra</text>
+    <text x="200" y="105" font-family="system-ui" font-size="10" fill="#5eead4" text-anchor="middle">Property Management</text>
+    <!-- Welcome -->
+    <text x="200" y="160" font-family="system-ui" font-size="11" font-weight="600" fill="#14b8a6" text-anchor="middle" letter-spacing="0.18em">WELCOME BACK</text>
+    <text x="200" y="195" font-family="system-ui" font-size="28" font-weight="700" fill="#0f172a" text-anchor="middle">Sign in</text>
+    <text x="200" y="220" font-family="system-ui" font-size="14" fill="#64748b" text-anchor="middle">Access your properties, tenants, and payments.</text>
+    <!-- Email Field -->
+    <rect x="40" y="250" width="320" height="52" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="60" y="270" font-family="system-ui" font-size="12" fill="#94a3b8">you@example.com</text>
+    <text x="60" y="240" font-family="system-ui" font-size="11" font-weight="600" fill="#0f172a">Email address</text>
+    <!-- Password Field -->
+    <rect x="40" y="320" width="320" height="52" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+    <text x="60" y="340" font-family="system-ui" font-size="12" fill="#94a3b8">••••••••</text>
+    <text x="60" y="310" font-family="system-ui" font-size="11" font-weight="600" fill="#0f172a">Password</text>
+    <!-- Sign In Button -->
+    <rect x="40" y="400" width="320" height="52" rx="8" fill="url(#primary)"/>
+    <text x="200" y="435" font-family="system-ui" font-size="14" font-weight="700" fill="white" text-anchor="middle">Sign in</text>
+    <!-- Register Link -->
+    <text x="200" y="485" font-family="system-ui" font-size="13" fill="#64748b" text-anchor="middle">Don't have an account? <a href="#" fill="#14b8a6" font-weight="600">Register here</a></text>
+  </g>
+  <!-- Demo credentials hint -->
+  <text x="700" y="780" font-family="system-ui" font-size="11" fill="#94a3b8" text-anchor="middle">Demo: demo.admin@propentra.local / password</text>
+</svg>

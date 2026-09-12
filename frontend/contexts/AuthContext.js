@@ -5,7 +5,7 @@ import apiClient from '@/lib/api';
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
+export function AuthProvider({ children, forceLogin = false }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,8 +14,13 @@ export function AuthProvider({ children }) {
     let active = true;
     const initializeAuth = async () => {
       try {
+        // Force logout if forceLogin is enabled
+        if (forceLogin) {
+          apiClient.setToken(null);
+        }
+        
         const token = apiClient.getToken();
-        if (token) {
+        if (token && !forceLogin) {
           const response = await apiClient.getMe();
           if (active && response.success) {
             setUser(response.data);
@@ -31,7 +36,7 @@ export function AuthProvider({ children }) {
 
     initializeAuth();
     return () => { active = false; };
-  }, []);
+  }, [forceLogin]);
 
   const login = async (email, password) => {
     try {
@@ -77,6 +82,14 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const forceLogout = () => {
+    setUser(null);
+    apiClient.setToken(null);
+    if (typeof window !== 'undefined') {
+      window.location.replace('/login');
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -84,6 +97,7 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    forceLogout,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'administrator',
     isOwner: user?.role === 'owner',

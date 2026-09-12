@@ -34,7 +34,7 @@ export default function RootLayout({ children }) {
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-          <AuthProvider>
+          <AuthProvider forceLogin={false}>
             <ToastProvider>
               {children}
             </ToastProvider>
