@@ -1,110 +1,347 @@
-# Propentra Deployment Guide
+# Propentra Deployment Guide (Render)
 
 Two deployables:
 
-- **frontend/** – Next.js app (JavaScript). Static + SSR via Vercel (free Hobby tier).
+- **frontend/** – Next.js app (JavaScript). Static + SSR via Render (free Web Service tier).
 - **backend/** – Laravel 11 API (Sanctum token auth, Chapa payments).
 
-The backend runs on **Wasmer Edge** — the hosting option named in the master plan.
-As of 2026 Wasmer offers free Laravel hosting with a managed MySQL database, automatic
-SSL, custom domains, and GitHub CI/CD — **no credit card required** for the free tier
-(100k requests/mo, 1 GB storage, 100 MB database, 1 app).
+The backend runs on **Render** — a modern cloud platform with native Laravel support, managed PostgreSQL/MySQL, automatic SSL, custom domains, and GitHub CI/CD. Free tier includes 750 hours/month, 512 MB RAM, shared CPU, and a managed MySQL database.
 
-> Fallback: if you later leave the free tier, `deploy/vps/` has a complete
-> nginx + PHP-FPM + MySQL + Supervisor setup for any VPS. See `deploy/README.md`.
+## Backend — Render (free tier)
 
-## Backend — Wasmer Edge (free, no card)
+### 1. Prerequisites
+- GitHub repo with backend code (can be monorepo or separate `backend/` repo)
+- Render account (free, no credit card for hobby tier)
 
-### 1. Push the backend as its own repo
-Wasmer auto-detects Laravel from a repo that contains PHP. Pushing the whole monorepo
-confuses detection with the Next.js frontend, so the backend deploys from its **own**
-GitHub repo. From the GitHub web UI: new empty repo (e.g. `propentra-api`), then from
-`backend/` locally:
+### 2. Create Render Web Service for Backend
+1. Go to [Render Dashboard](https://dashboard.render.com) → **New +** → **Web Service**
+2. Connect your GitHub repo (select the repo containing `backend/`)
+3. Configure:
+   - **Name**: `propentra-api` (or your choice)
+   - **Region**: Oregon (US West) or Frankfurt (EU) — pick closest to users
+   - **Branch**: `main`
+   - **Root Directory**: `backend` (if using monorepo) or leave blank (if separate repo)
+   - **Runtime**: `Docker` (recommended) or `Node` → but we'll use Docker for Laravel
 
-```bash
-git init -b main .            # run inside backend/
-git remote add origin git@github.com:<you>/propentra-api.git
-git add -A && git commit -m "chore: initial backend export"
-git push -u origin main
+### 3. Create `render.yaml` (Infrastructure as Code)
+Add this file at repo root (or `backend/render.yaml`):
+
+```yaml
+# backend/render.yaml
+services:
+  - type: web
+    name: propentra-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    plan: free
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: FILESYSTEM_DISK
+        value: public
+      - key: CHAPA_TEST_MODE
+        value: "true"
+    # Secrets (set in dashboard, not in yaml):
+    # APP_KEY, APP_BOOTSTRAP_TOKEN, CHAPA_SECRET_KEY,
+    # FRONTEND_URL, CORS_ALLOWED_ORIGINS, SANCTUM_STATEFUL_DOMAINS
+databases:
+  - name: propentra-db
+    databaseName: propentra
+    user: propentra
+    region: oregon
+    plan: free
+    ipAllowList: []  # allow all for Render internal
 ```
 
-### 2. Import into Wasmer
-1. [Wasmer dashboard](https://wasmer.io) → **New App → Import from GitHub** → select
-   `propentra-api`.
-2. Wasmer detects **Laravel**, installs Composer dependencies, serves `public/`, and
-   attaches a **managed MySQL** database. It injects `DB_HOST`, `DB_PORT`, `DB_NAME`,
-   `DB_USER`, `DB_PASSWORD` automatically. (`config/database.php` already falls back
-   to `DB_USER` for the username.)
-3. Wait for the first deploy to succeed; note your app URL `https://<app>.wasmer.app`.
+### 4. Dockerfile for Laravel
+Create `backend/Dockerfile`:
 
-### 3. Add secrets and environment
-App → **Settings → Secrets / Environment**. (Never put these in the repo.)
+```dockerfile
+# backend/Dockerfile
+FROM php:8.3-fpm-alpine
 
+# Install system dependencies
+RUN apk add --no-cache \
+    nginx \
+    supervisor \
+    linux-headers \
+    $PHPIZE_DEPS \
+    && docker-php-ext-install pdo_mysql bcmath opcache \
+    && pecl install redis && docker-php-ext-enable redis
+
+# Configure PHP
+COPY docker/php.ini /usr/local/etc/php/conf.d/app.ini
+COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+
+# Configure Nginx
+COPY docker/nginx.conf /etc/nginx/http.d/default.conf
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Copy application code
+COPY . .
+
+# Install PHP dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Generate optimized autoloader & config cache
+RUN php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache
+
+# Permissions
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Expose port
+EXPOSE 8080
+
+# Start supervisor (nginx + php-fpm)
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+```
+
+### 5. Required Docker Config Files
+Create these in `backend/docker/`:
+
+**`docker/php.ini`**
+```ini
+memory_limit = 256M
+upload_max_filesize = 10M
+post_max_size = 10M
+max_execution_time = 60
+opcache.enable=1
+opcache.memory_consumption=128
+opcache.interned_strings_buffer=8
+opcache.max_accelerated_files=4000
+```
+
+**`docker/php-fpm.conf`**
+```ini
+[www]
+user = www-data
+group = www-data
+listen = 9000
+pm = dynamic
+pm.max_children = 5
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 3
+```
+
+**`docker/nginx.conf`**
+```nginx
+server {
+    listen 8080;
+    server_name _;
+    root /var/www/html/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+```
+
+**`docker/supervisord.conf`**
+```ini
+[supervisord]
+nodaemon=true
+logfile=/dev/stdout
+loglevel=info
+
+[program:php-fpm]
+command=php-fpm
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
+[program:nginx]
+command=nginx -g "daemon off;"
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+```
+
+### 6. Environment Variables (set in Render Dashboard → Environment)
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `APP_KEY` | `php artisan key:generate` output | **Secret** |
+| `APP_ENV` | `production` | |
+| `APP_DEBUG` | `false` | |
+| `APP_URL` | `https://your-api.onrender.com` | Render provides this |
+| `APP_BOOTSTRAP_TOKEN` | Long random string | **Secret** |
+| `DB_CONNECTION` | `mysql` | |
+| `DB_HOST` | (auto from DB) | Render injects via `DATABASE_URL` |
+| `DB_PORT` | `3306` | |
+| `DB_DATABASE` | `propentra` | |
+| `DB_USERNAME` | (auto from DB) | |
+| `DB_PASSWORD` | (auto from DB) | **Secret** |
+| `SESSION_DRIVER` | `database` | |
+| `CACHE_STORE` | `database` | |
+| `QUEUE_CONNECTION` | `sync` | Serverless - no worker |
+| `CACHE_STORE` | `database` | |
+| `LOG_CHANNEL` | `stderr` | |
+| `FILESYSTEM_DISK` | `public` | |
+| `FRONTEND_URL` | `https://your-frontend.onrender.com` | **Secret** |
+| `CORS_ALLOWED_ORIGINS` | `https://your-frontend.onrender.com` | **Secret** |
+| `SANCTUM_STATEFUL_DOMAINS` | `your-frontend.onrender.com` | **Secret** |
+| `CHAPA_SECRET_KEY` | Your Chapa key | **Secret** |
+| `CHAPA_TEST_MODE` | `true` | |
+
+> **Important**: Render automatically provides `DATABASE_URL` for the managed MySQL. Update `config/database.php` to parse it:
+```php
+// config/database.php - add at top
+$url = parse_url(env('DATABASE_URL'));
+if ($url) {
+    config([
+        'database.connections.mysql.host' => $url['host'],
+        'database.connections.mysql.port' => $url['port'] ?? 3306,
+        'database.connections.mysql.database' => ltrim($url['path'], '/'),
+        'database.connections.mysql.username' => $url['user'],
+        'database.connections.mysql.password' => $url['pass'],
+    ]);
+}
+```
+
+### 7. Bootstrap (run migrations)
+After first deploy, call once:
+```
+https://your-api.onrender.com/__bootstrap?token=YOUR_APP_BOOTSTRAP_TOKEN
+```
+Returns `{"ok":true}`. Runs `migrate --force` (idempotent).
+
+### 8. Smoke Test
+```bash
+curl -i https://your-api.onrender.com/api/v1/auth/me     # 401 JSON
+curl -i https://your-api.onrender.com/storage/foobar.png # 404
+```
+
+## Frontend — Render (free tier)
+
+### 1. Create Render Web Service for Frontend
+1. Render Dashboard → **New +** → **Web Service**
+2. Connect same GitHub repo
+3. Configure:
+   - **Name**: `propentra-frontend`
+   - **Region**: Same as backend
+   - **Branch**: `main`
+   - **Root Directory**: `frontend`
+   - **Runtime**: `Node`
+   - **Build Command**: `npm ci && npm run build`
+   - **Start Command**: `npm start`
+   - **Plan**: Free
+
+### 2. `next.config.mjs` (ensure output: standalone)
+```js
+// frontend/next.config.mjs
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  output: 'standalone',
+  reactStrictMode: true,
+  images: { unoptimized: true },
+};
+export default nextConfig;
+```
+
+### 3. Environment Variable
 | Variable | Value |
-| -------- | ----- |
-| `APP_KEY` | generated locally with `php artisan key:generate` |
-| `APP_ENV` | `production` |
-| `APP_DEBUG` | `false` |
-| `APP_BOOTSTRAP_TOKEN` | a long random string (guards the one-time setup route) |
-| `QUEUE_CONNECTION` | `sync` (serverless — no long-running worker) |
-| `SESSION_DRIVER` | `database` |
-| `CACHE_STORE` | `database` |
-| `LOG_CHANNEL` | `stderr` |
-| `FILESYSTEM_DISK` | `public` |
-| `FRONTEND_URL` | `https://<your-app>.vercel.app` |
-| `CORS_ALLOWED_ORIGINS` | `https://<your-app>.vercel.app` |
-| `SANCTUM_STATEFUL_DOMAINS` | `<your-app>.vercel.app` |
-| `CHAPA_SECRET_KEY` | Chapa key (test first, then live) |
-| `CHAPA_TEST_MODE` | `true` to start |
+|----------|-------|
+| `NEXT_PUBLIC_API_URL` | `https://your-api.onrender.com/api/v1` |
 
-### 4. Create the database schema
-One HTTP call (no shell needed on serverless). After deploy:
+> Must end with `/api/v1`. The frontend does **not** append `/v1`.
 
-```text
-https://<app>.wasmer.app/__bootstrap?token=<APP_BOOTSTRAP_TOKEN>
-```
+### 4. Deploy
+- Push to `main` → Render auto-deploys both services
+- Frontend gets URL like `https://propentra-frontend.onrender.com`
+- Backend gets URL like `https://propentra-api.onrender.com`
 
-This runs `migrate --force` (idempotent — safe to re-run after redeploys). It does
-**not** seed demo data; production starts clean.
+## Custom Domains (optional)
+- Render Dashboard → Service → Settings → **Custom Domains**
+- Add your domain, SSL issued automatically
 
-### 5. Custom domain (optional)
-App → Settings → **Domains** → add your domain. SSL is issued automatically.
+## CORS / Cross-Origin Checklist
+- `CORS_ALLOWED_ORIGINS` = exact frontend origin (no trailing slash)
+- `SANCTUM_STATEFUL_DOMAINS` = frontend domain only
+- Chapa callback `POST /api/v1/payments/chapa/callback` must be publicly reachable (outside `auth:sanctum`)
 
-### 6. Smoke test
+## Secrets Management
+- Never commit `.env` or `frontend/.env.local`
+- Use Render Dashboard → Environment → **Secret Files** or **Environment Variables** (mark as secret)
+- Rotate `APP_KEY` and `APP_BOOTSTRAP_TOKEN` per environment
+
+## Pre-Deploy Checklist
 ```bash
-curl -i https://<app>.wasmer.app/api/v1/auth/me     # expect 401 JSON (no token)
-curl -i https://<app>.wasmer.app/storage/foobar.png # expect 404 (route works)
+# Frontend
+cd frontend && npm run lint && npm run build && npm run test
+
+# Backend
+cd backend && php artisan test
 ```
 
-## Frontend (Vercel, free)
+## Repository Hygiene
+- Never commit `.env` files
+- Use `render.yaml` for IaC (infrastructure as code)
+- See `docs/UAT.md` for pre-release journey checks
 
-1. Push the repo, then in Vercel: **New Project → Import** the GitHub repo.
-2. Framework preset: **Next.js** (auto-detected; `vercel.json` pins build/install commands).
-3. Root directory: `frontend`.
-4. Add the environment variable:
+---
 
-   | Variable             | Production value                                    |
-   | -------------------- | --------------------------------------------------- |
-   | `NEXT_PUBLIC_API_URL`| `https://<app>.wasmer.app/api/v1`                    |
+## Quick Start (One-time setup)
+```bash
+# 1. Push to GitHub
+git push origin main
 
-   The frontend does **not** append `/v1` — the base URL must end in `/api/v1`
-   (e.g. local: `http://127.0.0.1:8899/api/v1`).
-5. Deploy. Check `Settings → General` Node.js version is 18+.
-6. Create your first real account via `/register` (tenant) and the admin Users page
-   for owner/manager/admin accounts.
+# 2. In Render Dashboard:
+#    - New Web Service → backend (Docker, rootDir: backend)
+#    - New Web Service → frontend (Node, rootDir: frontend)
+#    - New Database → MySQL (free)
 
-## CORS / cross-origin checklist
-- `CORS_ALLOWED_ORIGINS` = exact frontend origin (no trailing slash).
-- `SANCTUM_STATEFUL_DOMAINS` = comma list of frontend domains.
-- Chapa: keep `CHAPA_TEST_MODE=true` with test keys for launch; flip to `false` with live
-  keys only after merchant approval + UAT. The callback `POST /api/v1/payments/chapa/callback`
-  is outside `auth:sanctum` by design and must be publicly reachable.
+# 3. Set env vars in each service (see tables above)
 
-## Secrets
-Never commit `.env` or `frontend/.env.local`. On Wasmer, secrets live in the dashboard
-(or `wasmer app secrets`) — never in the repo.
+# 3. Deploy → Render builds & deploys automatically
 
-## Repository hygiene
-- Run before deploy: `npm run lint`, `npm run build`, `npm run test` in `frontend/` and
-  `php artisan test` in `backend/`.
-- See `docs/UAT.md` for the pre-release journey checks.
+# 4. Bootstrap backend:
+curl "https://your-api.onrender.com/__bootstrap?token=YOUR_TOKEN"
+
+# 5. Verify:
+curl -i https://your-api.onrender.com/api/v1/auth/me
+```
+
+**Done.** 🎉 Your Propentra app is live on Render free tier.
