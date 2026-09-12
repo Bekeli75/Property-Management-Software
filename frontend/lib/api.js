@@ -289,8 +289,9 @@ class ApiClient {
   }
 
   // Tenants
-  async getTenants() {
-    return this.get('/tenants');
+  async getTenants(forLeaseCreation = false) {
+    const params = forLeaseCreation ? '?for_lease_creation=true' : '';
+    return this.get(`/tenants${params}`);
   }
 
   async getTenant(id) {

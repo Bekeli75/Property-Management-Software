@@ -87,9 +87,9 @@ export default function LeasesPage() {
     }
   }, [toast]);
 
-  const fetchTenants = useCallback(async () => {
+  const fetchTenants = useCallback(async (forLeaseCreation = false) => {
     try {
-      const response = await apiClient.getTenants();
+      const response = await apiClient.getTenants(forLeaseCreation);
       if (response.success) setTenants(response.data);
     } catch (error) {
       console.error('Failed to fetch tenants:', error);
@@ -123,7 +123,7 @@ export default function LeasesPage() {
     const load = async () => {
       await fetchLeases();
       if (!isTenant) {
-        await fetchTenants();
+        await fetchTenants(true); // bypass role filtering for lease creation
         await fetchUnits();
         await fetchProperties();
       }

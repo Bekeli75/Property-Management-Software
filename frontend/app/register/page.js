@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/Logo';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Sun, Moon } from 'lucide-react';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -17,6 +19,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
 
   const handleChange = (event) => {
@@ -54,19 +57,28 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-dvh items-stretch justify-center bg-slate-50 px-4 py-8 sm:items-center sm:py-10">
+    <div className="flex min-h-dvh items-stretch justify-center px-4 py-8 sm:items-center sm:py-10">
       <div className="flex w-full max-w-md flex-col justify-center">
-        <div className="card p-6 sm:p-10">
-          <div className="flex justify-center">
-            <Logo size="md" markOnly />
+        <div className="card-premium p-6 sm:p-10">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex justify-center">
+              <Logo size="md" markOnly />
+            </div>
+            <button
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              className="btn btn-ghost p-2"
+            >
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
           </div>
-          <p className="mt-6 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700">Tenant registration</p>
-          <h1 className="mt-2 text-center text-2xl font-semibold tracking-tight text-slate-950">Create your account</h1>
-          <p className="mt-2 text-center text-sm text-slate-500">Register to access your lease, pay rent, and request maintenance.</p>
+          <p className="mt-2 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700 dark:text-teal-300">Tenant registration</p>
+          <h1 className="mt-2 text-center text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Create your account</h1>
+          <p className="mt-2 text-center text-sm text-slate-500 dark:text-slate-400">Register to access your lease, pay rent, and request maintenance.</p>
 
           <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
             {error && (
-              <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-700">{error}</p>
+              <p role="alert" className="rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
             )}
 
             <div>
@@ -148,9 +160,9 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
+          <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
             Already have an account?{' '}
-            <Link href="/login" className="font-semibold text-teal-700 hover:text-teal-900">Sign in here</Link>
+            <Link href="/login" className="font-semibold text-teal-700 hover:text-teal-900 dark:text-teal-300">Sign in here</Link>
           </p>
         </div>
       </div>

@@ -18,11 +18,15 @@ import {
   LogOut,
   Menu,
   X,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import Logo from '@/components/Logo';
 import GlobalSearch from '@/components/GlobalSearch';
 import NotificationPopover from '@/components/NotificationPopover';
+import Footer from '@/components/Footer';
 
 const navGroups = [
   {
@@ -83,6 +87,7 @@ const tenantGroupLabels = {
 
 export default function AppShell({ children }) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -149,14 +154,23 @@ export default function AppShell({ children }) {
 
       <div className="shrink-0 border-t border-white/[0.06] p-4">
         <div className="rounded-xl bg-white/[0.05] p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-500/20 text-sm font-bold text-teal-300">
-              {user.name?.charAt(0)?.toUpperCase() || '?'}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-500/20 text-sm font-bold text-teal-300">
+                {user.name?.charAt(0)?.toUpperCase() || '?'}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+                <p className="mt-0.5 text-xs capitalize text-teal-400">{roleLabels[user.role] || user.role}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{user.name}</p>
-              <p className="mt-0.5 text-xs capitalize text-teal-400">{roleLabels[user.role] || user.role}</p>
-            </div>
+            <button
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.05] text-slate-400 hover:bg-white/[0.1] hover:text-teal-300 transition"
+            >
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
           </div>
         </div>
         <button
@@ -170,8 +184,8 @@ export default function AppShell({ children }) {
     </>
   );
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
+return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-[#0b1220] md:flex">
         {NavContent}
@@ -198,7 +212,7 @@ export default function AppShell({ children }) {
         </div>
       )}
 
-      <div className="md:pl-64">
+      <div className="md:pl-64 flex flex-1 flex-col">
         {/* Top header */}
         <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-[#f0f4f8]/85 backdrop-blur-xl">
           <div className="flex min-h-20 flex-wrap items-center gap-3 px-4 py-3 sm:px-8">
@@ -228,7 +242,11 @@ export default function AppShell({ children }) {
           </div>
         </header>
 
-        {children}
+        <main className="flex-1">
+          {children}
+        </main>
+
+        <Footer />
       </div>
     </div>
   );

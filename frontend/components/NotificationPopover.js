@@ -71,7 +71,7 @@ export default function NotificationPopover() {
         {unreadCount > 0 && <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">{unreadCount > 9 ? '9+' : unreadCount}</span>}
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+        <div className="dropdown-popover">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <div><h2 className="text-sm font-semibold text-slate-900">Notifications</h2><p className="mt-0.5 text-xs text-slate-500">{unreadCount ? `${unreadCount} unread` : 'All caught up'}</p></div>
             {unreadCount > 0 && <button onClick={markAllRead} className="text-xs font-semibold text-teal-700 hover:text-teal-900">Mark all read</button>}

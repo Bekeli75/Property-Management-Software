@@ -16,21 +16,26 @@ class TenantController extends ApiController
     {
         $user = $request->user();
         
+        // Allow fetching all tenants for lease creation (bypass role filtering)
+        $forLeaseCreation = $request->boolean('for_lease_creation');
+        
         $query = Tenant::query();
         
-        // Role-based filtering
-        if ($user->isTenant()) {
-            $query->where('user_id', $user->id);
-        } elseif ($user->isOwner()) {
-            $query->whereHas('leases.unit.property', function ($q) use ($user) {
-                $q->where('owner_id', $user->id);
-            });
-        } elseif ($user->isManager()) {
-            $query->whereHas('leases.unit.property', function ($q) use ($user) {
-                $q->whereHas('managers', function ($mq) use ($user) {
-                    $mq->where('users.id', $user->id);
+        // Role-based filtering (skip for lease creation)
+        if (!$forLeaseCreation) {
+            if ($user->isTenant()) {
+                $query->where('user_id', $user->id);
+            } elseif ($user->isOwner()) {
+                $query->whereHas('leases.unit.property', function ($q) use ($user) {
+                    $q->where('owner_id', $user->id);
                 });
-            });
+            } elseif ($user->isManager()) {
+                $query->whereHas('leases.unit.property', function ($q) use ($user) {
+                    $q->whereHas('managers', function ($mq) use ($user) {
+                        $mq->where('users.id', $user->id);
+                    });
+                });
+            }
         }
         
         $tenants = $query->with(['user', 'activeLease.unit.property'])->get();

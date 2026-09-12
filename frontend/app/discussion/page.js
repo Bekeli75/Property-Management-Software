@@ -258,16 +258,19 @@ export default function DiscussionPage() {
               ) : (
                 messages.map((item) => {
                   const mine = item.sender_id === user.id;
+                  const isTenantSender = item.sender?.role === 'tenant';
+                  const bubble = mine
+                    ? 'rounded-br-sm bg-teal-600 text-white'
+                    : isTenantSender
+                    ? 'rounded-bl-sm bg-emerald-50 text-emerald-900 border border-emerald-100'
+                    : 'rounded-bl-sm bg-slate-100 text-slate-800';
+                  const nameColor = isTenantSender ? 'text-emerald-700' : 'text-teal-700';
                   return (
                     <div key={item.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 ${
-                        mine
-                          ? 'rounded-br-sm bg-teal-600 text-white'
-                          : 'rounded-bl-sm bg-slate-100 text-slate-800'
-                      }`}>
-                        {!mine && <p className="mb-1 text-[11px] font-semibold text-teal-700">{item.sender?.name}</p>}
+                      <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 ${bubble}`}>
+                        {!mine && <p className="mb-1 text-[11px] font-semibold" style={{color: isTenantSender ? '#047857' : '#0f766e'}}>{item.sender?.name}</p>}
                         <p className="whitespace-pre-wrap text-sm leading-6">{item.message}</p>
-                        <p className={`mt-1 text-right text-[10px] ${mine ? 'text-teal-100' : 'text-slate-400'}`}>
+                        <p className={`mt-1 text-right text-[10px] ${mine ? 'text-teal-100' : (isTenantSender ? 'text-emerald-400' : 'text-slate-400')}`}>
                           {timeLabel(item.created_at)}
                         </p>
                       </div>

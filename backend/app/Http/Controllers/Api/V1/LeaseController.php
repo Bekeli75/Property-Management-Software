@@ -126,7 +126,7 @@ $leases = $query->with(['tenant.user', 'unit.property'])->get();
     /**
      * Display the specified lease
      */
-    public function show(Request $request, Lease $lease)
+public function show(Request $request, Lease $lease)
     {
         $this->authorizeLeaseAccess($request->user(), $lease);
         $lease->load(['tenant.user', 'unit.property', 'payments', 'attachments']);
