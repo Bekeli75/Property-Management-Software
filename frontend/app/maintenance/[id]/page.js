@@ -8,6 +8,7 @@ import AppShell from '@/components/AppShell';
 import AuthGuard from '@/components/AuthGuard';
 import Badge from '@/components/ui/Badge';
 import { SkeletonCard } from '@/components/ui/Skeleton';
+import Breadcrumb from '@/components/ui/Breadcrumb';
 import { imageUrl } from '@/components/PropertyImageFields';
 import {
   ArrowLeft,
@@ -18,6 +19,8 @@ import {
   UserCheck,
   Banknote,
   CheckCircle,
+  ChevronRight,
+  LayoutDashboard,
 } from 'lucide-react';
 
 function formatCurrency(value) {
@@ -97,6 +100,7 @@ export default function MaintenanceDetailPage() {
     <AuthGuard>
       <AppShell>
       <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+        <Breadcrumb />
         <button type="button" onClick={() => router.push('/maintenance')} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-teal-700">
           <ArrowLeft size={16} />
           Back to maintenance

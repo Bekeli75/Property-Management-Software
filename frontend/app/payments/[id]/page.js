@@ -8,7 +8,8 @@ import AppShell from '@/components/AppShell';
 import AuthGuard from '@/components/AuthGuard';
 import Badge from '@/components/ui/Badge';
 import { SkeletonCard } from '@/components/ui/Skeleton';
-import { ArrowLeft, Banknote, Building2, DoorOpen, CalendarClock, Hash, CheckCircle2, FileText, ReceiptText } from 'lucide-react';
+import Breadcrumb from '@/components/ui/Breadcrumb';
+import { ArrowLeft, Banknote, Building2, DoorOpen, CalendarClock, Hash, CheckCircle2, FileText, ReceiptText, ChevronRight, LayoutDashboard } from 'lucide-react';
 
 function formatDate(value) {
   if (!value) return '—';
@@ -86,6 +87,7 @@ export default function PaymentDetailPage() {
     <AuthGuard>
       <AppShell>
       <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+        <Breadcrumb />
         <button type="button" onClick={() => router.push('/payments')} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-teal-700">
           <ArrowLeft size={16} />
           Back to payments

@@ -11,7 +11,8 @@ import PageHeader from '@/components/ui/PageHeader';
 import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
-import { Shield, Plus, User, UserCheck, UserX, Loader2, Trash2 } from 'lucide-react';
+import Breadcrumb from '@/components/ui/Breadcrumb';
+import { Shield, Plus, User, UserCheck, UserX, Loader2, Trash2, ChevronRight, LayoutDashboard } from 'lucide-react';
 
 const roleLabels = {
   administrator: 'Administrator',
@@ -127,6 +128,7 @@ export default function AdminUsersPage() {
     <AuthGuard roles={['administrator']}>
       <AppShell>
         <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+          <Breadcrumb />
           <PageHeader
             eyebrow="Administration"
             title="User management"

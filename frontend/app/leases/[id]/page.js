@@ -12,7 +12,8 @@ import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { SkeletonCard } from '@/components/ui/Skeleton';
-import { ArrowLeft, FileText, Paperclip, CreditCard, CalendarRange, Banknote, User, Building2, XCircle } from 'lucide-react';
+import Breadcrumb from '@/components/ui/Breadcrumb';
+import { ArrowLeft, FileText, Paperclip, CreditCard, CalendarRange, Banknote, User, Building2, XCircle, ChevronRight, LayoutDashboard } from 'lucide-react';
 
 function formatCurrency(value) {
   if (value === null || value === undefined || value === '') return '—';
@@ -148,6 +149,7 @@ export default function LeaseDetailPage() {
     <AuthGuard>
       <AppShell>
       <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+        <Breadcrumb />
         <button type="button" onClick={() => router.push('/leases')} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-teal-700">
           <ArrowLeft size={16} />
           Back to leases

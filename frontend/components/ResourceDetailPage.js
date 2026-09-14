@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import apiClient from '@/lib/api';
 import AppShell from '@/components/AppShell';
 import AuthGuard from '@/components/AuthGuard';
+import Breadcrumb from '@/components/ui/Breadcrumb';
 
 const resourceConfig = {
   unit: {
@@ -119,6 +120,7 @@ export default function ResourceDetailPage({ resourceType, roles }) {
     <AuthGuard roles={roles}>
       <AppShell>
       <main className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
+        <Breadcrumb />
         <button onClick={() => router.push(config.collectionPath)} className="mb-5 text-sm font-semibold text-teal-700 hover:text-teal-900">Back to {config.label.toLowerCase()}s</button>
         <section className="rounded-2xl bg-slate-900 p-6 text-white shadow-sm sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-300">{config.label}</p>

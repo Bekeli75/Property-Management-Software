@@ -12,19 +12,8 @@ import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { SkeletonCard } from '@/components/ui/Skeleton';
-import {
-  ArrowLeft,
-  User,
-  Mail,
-  Phone,
-  CalendarClock,
-  Banknote,
-  Wrench,
-  ChevronRight,
-  Link2,
-  Unlink,
-  UserPlus,
-} from 'lucide-react';
+import Breadcrumb from '@/components/ui/Breadcrumb';
+import { ArrowLeft, User, Mail, Phone, CalendarClock, Banknote, Wrench, ChevronRight, Link2, Unlink, UserPlus, ChevronRight as ChevronRightIcon, LayoutDashboard } from 'lucide-react';
 
 function formatDate(value) {
   if (!value) return '—';
@@ -161,6 +150,7 @@ export default function TenantDetailPage() {
     <AuthGuard roles={['administrator', 'owner', 'manager']}>
       <AppShell>
       <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+        <Breadcrumb />
         <button type="button" onClick={() => router.push('/tenants')} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-teal-700">
           <ArrowLeft size={16} />
           Back to tenants

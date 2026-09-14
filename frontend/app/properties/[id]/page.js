@@ -13,6 +13,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
 import { SkeletonCard } from '@/components/ui/Skeleton';
+import Breadcrumb from '@/components/ui/Breadcrumb';
 import {
   Building2,
   MapPin,
@@ -27,6 +28,8 @@ import {
   User as UserIcon,
   UserPlus,
   ShieldCheck,
+  ChevronRight,
+  LayoutDashboard,
 } from 'lucide-react';
 
 export default function PropertyDetailPage() {
@@ -186,6 +189,7 @@ export default function PropertyDetailPage() {
     <AuthGuard roles={['administrator', 'owner', 'manager']}>
       <AppShell>
       <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
+        <Breadcrumb />
         <button type="button" onClick={() => router.push('/properties')} className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-teal-700">
           <ArrowLeft size={16} />
           Back to properties
