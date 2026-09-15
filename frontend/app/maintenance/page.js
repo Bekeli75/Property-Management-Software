@@ -14,6 +14,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 import { SkeletonDashboard } from '@/components/ui/Skeleton';
+import { imageUrl } from '@/components/PropertyImageFields';
 import MaintenanceKanban from '@/components/MaintenanceKanban';
 import { Plus, Camera, LayoutGrid, KanbanSquare } from 'lucide-react';
 
@@ -312,7 +313,7 @@ export default function MaintenancePage() {
                         {request.photos && request.photos.length > 0 ? (
                           <div className="relative h-36 w-full">
                             <img
-                              src={request.photos[0] && request.photos[0].file_path ? request.photos[0].file_path : ''}
+                              src={request.photos[0] && request.photos[0].file_path ? imageUrl(request.photos[0].file_path) : ''}
                               alt=""
                               className="h-full w-full object-cover"
                             />

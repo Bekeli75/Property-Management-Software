@@ -159,8 +159,8 @@ export default function MaintenanceKanban({ initialRequests = [] }) {
                           <Clock size={12} />
                           {formatDate(request.requested_date)}
                         </span>
-                        {request.assigned_to_name && (
-                          <span className="truncate">Assigned: {request.assigned_to_name}</span>
+                        {request.assigned_to && (
+                          <span className="truncate">Assigned: {request.assigned_to}</span>
                         )}
                       </div>
                       {!isTenant && (
