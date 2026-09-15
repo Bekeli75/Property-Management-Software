@@ -13,7 +13,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { SkeletonCard } from '@/components/ui/Skeleton';
+import { SkeletonCard, SkeletonList, SkeletonTable } from '@/components/ui/Skeleton';
 import { Users, UserPlus, Trash2, ChevronRight, ShieldCheck } from 'lucide-react';
 
 const emptyForm = {
@@ -123,14 +123,12 @@ export default function TenantsPage() {
     }
   };
 
-  if (loading) {
+if (loading) {
     return (
       <AppShell>
         <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
-          <PageHeader eyebrow="People" title="Tenants" description="Manage tenant profiles and lease associations." />
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
-          </div>
+          <PageHeader eyebrow="People" title="Tenants" description="Tenant profiles linked to active and past leases." />
+          <SkeletonList items={5} hasAvatar={true} />
         </main>
       </AppShell>
     );
@@ -154,13 +152,13 @@ export default function TenantsPage() {
           }
         />
 
-        {tenants.length === 0 ? (
+{tenants.length === 0 ? (
           <div className="mt-8">
             <EmptyState
-              icon={Users}
+              image="/images/empty-tenants.svg"
               title="No tenants yet"
-              description="Tenant records are created when users register with the tenant role."
-              actionLabel={canManage ? 'Add tenant' : undefined}
+              description="Add your first tenant to get started"
+              actionLabel={canManage ? 'Add Tenant' : undefined}
               onAction={canManage ? () => setShowModal(true) : undefined}
             />
           </div>

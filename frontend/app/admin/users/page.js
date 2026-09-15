@@ -13,6 +13,7 @@ import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
 import Breadcrumb from '@/components/ui/Breadcrumb';
 import { Shield, Plus, User, UserCheck, UserX, Loader2, Trash2, ChevronRight, LayoutDashboard } from 'lucide-react';
+import EmptyState from '@/components/ui/EmptyState';
 
 const roleLabels = {
   administrator: 'Administrator',
@@ -190,7 +191,15 @@ export default function AdminUsersPage() {
                   <tbody className="divide-y divide-slate-50 bg-white">
                     {visibleUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-6 py-12 text-center text-slate-500">No users found.</td>
+                        <td colSpan={4} className="px-6 py-12 text-center">
+                          <EmptyState
+                            image="/images/empty-admin-users.svg"
+                            title="No users found"
+                            description="Add staff accounts to get started"
+                            actionLabel="Add staff account"
+                            onAction={() => setShowForm(true)}
+                          />
+                        </td>
                       </tr>
                     ) : (
                       visibleUsers.map((account) => (

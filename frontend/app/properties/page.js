@@ -14,7 +14,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
 import EmptyState from '@/components/ui/EmptyState';
-import { SkeletonCard } from '@/components/ui/Skeleton';
+import { SkeletonCard, SkeletonCard as SkeletonPropertyCard, SkeletonDashboard } from '@/components/ui/Skeleton';
 import { Building2, Plus, Trash2, MapPin, Layers3, Ruler, CalendarDays, ArrowRight } from 'lucide-react';
 
 const emptyForm = {
@@ -112,14 +112,12 @@ export default function PropertiesPage() {
     }
   };
 
-  if (loading) {
+if (loading) {
     return (
       <AppShell>
         <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
-          <PageHeader eyebrow="Management" title="Properties" description="Keep property details, occupancy, and day-to-day work organized." />
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
-          </div>
+          <PageHeader eyebrow="Management" title="Properties" description="Manage your property portfolio, units, and details." />
+          <SkeletonDashboard />
         </main>
       </AppShell>
     );
@@ -143,10 +141,10 @@ export default function PropertiesPage() {
           }
         />
 
-        {properties.length === 0 ? (
+{properties.length === 0 ? (
           <div className="mt-8">
             <EmptyState
-              icon={Building2}
+              image="/images/empty-properties.svg"
               title="No properties yet"
               description="Add your first property to start tracking units, leases, and maintenance."
               actionLabel={canManage ? 'Add your first property' : undefined}

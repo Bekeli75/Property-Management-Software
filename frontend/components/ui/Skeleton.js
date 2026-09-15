@@ -1,31 +1,74 @@
-export default function Skeleton({ className = '' }) {
-  return <div className={`skeleton ${className}`} aria-hidden="true" />;
+'use client';
+
+/**
+ * @typedef {Object} SkeletonProps
+ * @property {string} [className]
+ * @property {'text'|'circular'|'rectangular'} [variant]
+ * @property {string|number} [width]
+ * @property {string|number} [height]
+ */
+
+export default function Skeleton({ className = '', variant = 'text', width, height }) {
+  const baseClasses = 'skeleton animate-pulse';
+  const variantClasses = {
+    text: 'h-4 rounded',
+    circular: 'rounded-full',
+    rectangular: 'rounded-lg',
+  };
+
+  const style = {};
+  if (width) style.width = typeof width === 'number' ? `${width}px` : width;
+  if (height) style.height = typeof height === 'number' ? `${height}px` : height;
+
+  return (
+    <div className={`${baseClasses} ${variantClasses[variant]} ${className}`} style={style} aria-hidden="true" />
+  );
 }
 
 export function SkeletonCard({ className = '' }) {
   return (
-    <div className={`card p-5 ${className}`} aria-hidden="true">
-      <Skeleton className="h-4 w-2/3" />
-      <Skeleton className="mt-4 h-8 w-1/2" />
-      <Skeleton className="mt-4 h-4 w-full" />
-      <Skeleton className="mt-2 h-4 w-3/4" />
+    <div className={`card p-6 ${className}`}>
+      <Skeleton variant="rectangular" width="100%" height={24} className="mb-4" />
+      <Skeleton variant="text" width="60%" height={16} className="mb-2" />
+      <Skeleton variant="text" width="40%" height={16} className="mb-2" />
+      <Skeleton variant="text" width="30%" height={16} />
     </div>
   );
 }
 
-export function SkeletonTable({ rows = 6, cols = 5, className = '' }) {
+export function SkeletonTable({ rows = 5, columns = 4 }) {
   return (
-    <div className={`card overflow-hidden ${className}`} aria-hidden="true">
-      <div className="grid gap-4 border-b border-slate-100 bg-slate-50/60 p-4" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-        {Array.from({ length: cols }).map((_, i) => (
-          <Skeleton key={`h${i}`} className="h-3 w-16" />
+    <div className="card overflow-hidden">
+      <div className="bg-slate-50/70 px-6 py-3 border-b border-slate-100">
+        <div className="flex gap-4">
+          {Array.from({ length: columns }).map((_, i) => (
+            <Skeleton key={i} variant="text" width="80px" height="12px" />
+          ))}
+        </div>
+      </div>
+      <div className="divide-y divide-slate-50">
+        {Array.from({ length: rows }).map((_, rowIndex) => (
+          <div key={rowIndex} className="px-6 py-4 flex gap-4">
+            {Array.from({ length: columns }).map((_, colIndex) => (
+              <Skeleton key={colIndex} variant="text" width="80px" height="16px" />
+            ))}
+          </div>
         ))}
       </div>
-      {Array.from({ length: rows }).map((_, r) => (
-        <div key={r} className="grid gap-4 border-b border-slate-50 p-4 last:border-0" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-          {Array.from({ length: cols }).map((_, c) => (
-            <Skeleton key={`${r}-${c}`} className="h-4 w-24" />
-          ))}
+    </div>
+  );
+}
+
+export function SkeletonList({ items = 5, hasAvatar = true }) {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: items }).map((_, index) => (
+        <div key={index} className="flex items-center gap-4">
+          {hasAvatar && <Skeleton variant="circular" width={40} height={40} />}
+          <div className="flex-1 space-y-2">
+            <Skeleton variant="text" width="40%" height={16} />
+            <Skeleton variant="text" width="60%" height={12} />
+          </div>
         </div>
       ))}
     </div>
@@ -34,13 +77,27 @@ export function SkeletonTable({ rows = 6, cols = 5, className = '' }) {
 
 export function SkeletonStat({ className = '' }) {
   return (
-    <div className={`card p-5 ${className}`} aria-hidden="true">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-10 w-10 rounded-lg" />
-        <Skeleton className="h-3 w-12" />
+    <div className={`card p-6 ${className}`}>
+      <Skeleton variant="text" width="80px" height={14} className="mb-4" />
+      <Skeleton variant="text" width="100px" height={32} className="mb-2" />
+      <Skeleton variant="text" width="60px" height={12} />
+    </div>
+  );
+}
+
+export function SkeletonDashboard() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="card p-6">
+            <Skeleton variant="text" width="80px" height={14} className="mb-4" />
+            <Skeleton variant="text" width="100px" height={32} className="mb-2" />
+            <Skeleton variant="text" width="60px" height={12} />
+          </div>
+        ))}
       </div>
-      <Skeleton className="mt-5 h-8 w-24" />
-      <Skeleton className="mt-2 h-3 w-16" />
+      <SkeletonTable rows={5} columns={4} />
     </div>
   );
 }

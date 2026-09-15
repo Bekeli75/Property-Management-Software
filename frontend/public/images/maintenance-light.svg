@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" width="1400" height="900">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="sidebar" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#080f1a"/>
+    </linearGradient>
+    <linearGradient id="primary" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#14b8a6"/>
+      <stop offset="100%" stop-color="#0f766e"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="25%" cy="0%" r="70%">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="100%" cy="100%" r="60%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect fill="url(#bg)" width="1400" height="900"/>
+  <rect fill="url(#sidebar)" x="0" y="0" width="280" height="900"/>
+  <text x="140" y="60" font-family="system-ui" font-size="18" font-weight="bold" fill="#5eead4" text-anchor="middle">Propentra</text>
+  <text x="140" y="85" font-family="system-ui" font-size="10" fill="#5eead4" text-anchor="middle">Property Management</text>
+  <g font-family="system-ui" font-size="13" fill="#94a3b8">
+    <text x="30" y="140">Overview</text>
+    <text x="30" y="175">Dashboard</text>
+    <text x="30" y="220">Management</text>
+    <text x="30" y="255">Properties</text>
+    <text x="30" y="290">Tenants</text>
+    <text x="30" y="325">Leases</text>
+    <text x="30" y="370">Operations</text>
+    <text x="30" y="405">Payments</text>
+    <text x="30" y="440">Maintenance</text>
+    <text x="30" y="475">Reports</text>
+    <text x="30" y="520">Communication</text>
+    <text x="30" y="555">Discussion</text>
+    <text x="30" y="590">Notifications</text>
+  </g>
+  <rect fill="url(#primary)" x="0" y="440" width="4" height="24"/>
+  <text x="30" y="454" font-family="system-ui" font-size="13" font-weight="bold" fill="white">Maintenance</text>
+  <rect fill="#ffffff" x="280" y="0" width="1120" height="80" opacity="0.95"/>
+  <rect fill="#e2e8f0" x="280" y="80" width="1120" height="1"/>
+  <text x="320" y="50" font-family="system-ui" font-size="20" font-weight="bold" fill="#0f172a">Maintenance</text>
+  <text x="320" y="70" font-family="system-ui" font-size="12" fill="#64748b">Manage maintenance requests and work orders.</text>
+  <g font-family="system-ui">
+    <rect x="320" y="120" width="500" height="100" rx="16" fill="url(#cardGrad)" stroke="#e2e8f0" stroke-width="1"/>
+    <ellipse cx="570" cy="130" rx="180" ry="60" fill="url(#glow1)"/>
+    <ellipse cx="650" cy="190" rx="150" ry="60" fill="url(#glow2)"/>
+    <text x="350" y="155" font-family="system-ui" font-size="18" font-weight="bold" fill="#0f172a">Kitchen sink leaking</text>
+    <text x="350" y="175" font-family="system-ui" font-size="12" fill="#64748b">Sunrise Heights • Unit A-204 • Sara Ahmed</text>
+    <text x="350" y="195" font-family="system-ui" font-size="11" fill="#64748b">Plumbing • High priority • 3 days ago</text>
+    <rect fill="#ef4444" x="350" y="205" width="80" height="22" rx="11"/>
+    <text x="390" y="211" font-size="10" fill="white" text-anchor="middle">In Progress</text>
+    <rect x="850" y="120" width="500" height="100" rx="16" fill="url(#cardGrad)" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="880" y="155" font-family="system-ui" font-size="18" font-weight="bold" fill="#0f172a">AC blowing warm air</text>
+    <text x="880" y="175" font-family="system-ui" font-size="12" fill="#64748b">Sunrise Heights • Unit A-102 • Abel Getachew</text>
+    <text x="880" y="195" font-family="system-ui" font-size="11" fill="#64748b">HVAC • Medium • 1 day ago</text>
+    <rect fill="#f59e0b" x="880" y="205" width="80" height="22" rx="11"/>
+    <text x="920" y="211" font-size="10" fill="white" text-anchor="middle">Pending</text>
+    <rect x="320" y="240" width="500" height="100" rx="16" fill="url(#cardGrad)" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="350" y="275" font-family="system-ui" font-size="18" font-weight="bold" fill="#0f172a">Hallway light flickering</text>
+    <text x="350" y="295" font-family="system-ui" font-size="12" fill="#64748b">Green Valley • Unit B-102 • Kebede Mulu</text>
+    <text x="350" y="315" font-family="system-ui" font-size="11" fill="#64748b">Electrical • Low • 5 days ago</text>
+    <rect fill="#10b981" x="350" y="325" width="80" height="22" rx="11"/>
+    <text x="390" y="211" font-size="10" fill="white" text-anchor="middle">Completed</text>
+  </g>
+  <text x="700" y="880" font-family="system-ui" font-size="11" fill="#94a3b8" text-anchor="middle">Propentra - Maintenance</text>
+</svg>

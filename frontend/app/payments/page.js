@@ -14,7 +14,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
 import ConfirmDialog from '@/components/ConfirmDialog';
-import { SkeletonCard } from '@/components/ui/Skeleton';
+import { SkeletonCard, SkeletonDashboard } from '@/components/ui/Skeleton';
 import { Banknote, CreditCard, CheckCircle2, Clock, AlertTriangle, ArrowRight } from 'lucide-react';
 
 const emptyForm = {
@@ -169,9 +169,7 @@ export default function PaymentsPage() {
       <AppShell>
         <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
           <PageHeader eyebrow="Finance" title="Payments" description={pageDescription} />
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
-          </div>
+          <SkeletonDashboard />
         </main>
       </AppShell>
     );
@@ -212,10 +210,10 @@ export default function PaymentsPage() {
           </div>
         )}
 
-        {payments.length === 0 ? (
+{payments.length === 0 ? (
           <div className="mt-8">
             <EmptyState
-              icon={Banknote}
+              image="/images/empty-payments.svg"
               title="No payments yet"
               description={isTenant ? 'Make your first rent payment via Chapa or ask your landlord to record one.' : 'Record your first payment or collect via Chapa.'}
               actionLabel={isTenant ? 'Pay with Chapa' : canManage ? 'Record payment' : undefined}

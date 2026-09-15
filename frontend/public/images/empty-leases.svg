@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <linearGradient id="illustration" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.1"/>
+    </linearGradient>
+  </defs>
+  <rect fill="url(#bg)" width="400" height="300"/>
+  <ellipse cx="200" cy="80" rx="120" ry="60" fill="url(#illustration)"/>
+  <circle cx="200" cy="110" r="40" fill="#f59e0b" opacity="0.15"/>
+  <path d="M200 85 L200 105" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+  <path d="M185 100 L200 115 L215 85" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <text x="200" y="180" font-family="system-ui" font-size="18" font-weight="600" fill="#0f172a" text-anchor="middle">No Leases Yet</text>
+  <text x="200" y="205" font-family="system-ui" font-size="13" fill="#64748b" text-anchor="middle">Create your first lease agreement</text>
+  <rect x="120" y="230" width="160" height="40" rx="8" fill="#f59e0b"/>
+  <text x="200" y="255" font-family="system-ui" font-size="13" font-weight="600" fill="white" text-anchor="middle">Create Lease</text>
+</svg>

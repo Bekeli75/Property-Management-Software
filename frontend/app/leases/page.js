@@ -15,7 +15,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
 import EmptyState from '@/components/ui/EmptyState';
-import { SkeletonStat } from '@/components/ui/Skeleton';
+import { SkeletonStat, SkeletonDashboard } from '@/components/ui/Skeleton';
 import {
   FileText,
   Plus,
@@ -231,9 +231,7 @@ export default function LeasesPage() {
       <AppShell>
         <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
           <PageHeader eyebrow="Management" title="Leases" description="Keep tenant agreements, rent terms, and attachments organized." />
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => <SkeletonStat key={i} />)}
-          </div>
+          <SkeletonDashboard />
         </main>
       </AppShell>
     );
@@ -264,10 +262,10 @@ export default function LeasesPage() {
         {leases.length === 0 ? (
           <div className="mt-8">
             <EmptyState
-              icon={FileText}
+              image="/images/empty-leases.svg"
               title="No leases yet"
               description={canManage ? 'Create your first lease to link a tenant with a unit.' : 'No lease is linked to this account yet.'}
-              actionLabel={canManage ? 'Create your first lease' : undefined}
+              actionLabel={canManage ? 'Create Lease' : undefined}
               onAction={canManage ? () => setShowModal(true) : undefined}
             />
           </div>

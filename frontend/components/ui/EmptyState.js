@@ -1,5 +1,6 @@
 export default function EmptyState({
   icon: Icon,
+  image,
   title = 'Nothing here yet',
   description,
   actionLabel,
@@ -8,7 +9,9 @@ export default function EmptyState({
 }) {
   return (
     <div className={`card flex flex-col items-center justify-center px-8 py-14 text-center ${className}`}>
-      {Icon && (
+      {image ? (
+        <img src={image} alt="" className="h-20 w-auto mb-5" />
+      ) : Icon && (
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-600">
           <Icon size={28} strokeWidth={1.75} />
         </div>

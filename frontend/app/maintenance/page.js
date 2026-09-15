@@ -15,7 +15,7 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
 import EmptyState from '@/components/ui/EmptyState';
-import { SkeletonCard } from '@/components/ui/Skeleton';
+import { SkeletonCard, SkeletonList, SkeletonDashboard } from '@/components/ui/Skeleton';
 import { imageUrl } from '@/components/PropertyImageFields';
 import { Wrench, Plus, Camera, MapPin, CalendarClock, ArrowRight, Trash2, UserCheck, CheckCircle } from 'lucide-react';
 
@@ -242,9 +242,7 @@ export default function MaintenancePage() {
       <AppShell>
         <main className="mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-10">
           <PageHeader eyebrow="Operations" title="Maintenance" description="Track repair requests, assignments, and completion." />
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
-          </div>
+          <SkeletonDashboard />
         </main>
       </AppShell>
     );
@@ -266,10 +264,10 @@ export default function MaintenancePage() {
           }
         />
 
-        {requests.length === 0 ? (
+{requests.length === 0 ? (
           <div className="mt-8">
             <EmptyState
-              icon={Wrench}
+              image="/images/empty-maintenance.svg"
               title="No maintenance requests"
               description="Create a request when something needs attention in a property."
               actionLabel="Create your first request"
