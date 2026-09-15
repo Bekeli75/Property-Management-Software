@@ -61,7 +61,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-dvh items-stretch justify-center px-4 py-8 sm:items-center sm:py-10">
+    <main id="main" className="flex flex-1 items-stretch justify-center px-4 py-8 outline-none sm:items-center sm:py-10">
       <div className="flex w-full max-w-md flex-col justify-center">
         <div className="card-premium p-6 sm:p-10">
           <div className="flex items-center justify-between mb-6">
@@ -147,6 +147,6 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

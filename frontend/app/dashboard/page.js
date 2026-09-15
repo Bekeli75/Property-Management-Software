@@ -182,7 +182,7 @@ export default function DashboardPage() {
                 {Array.from({ length: 4 }).map((_, i) => <SkeletonStat key={i} />)}
               </div>
             ) : (
-              <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <section className="stagger grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {statistics.map(([key, value]) => {
                   const cfg = statConfig[key] || { icon: LayoutGrid, label: key.replace(/_/g, ' ') };
                   return (

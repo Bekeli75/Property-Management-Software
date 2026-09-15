@@ -28,6 +28,7 @@ import GlobalSearch from '@/components/GlobalSearch';
 import NotificationPopover from '@/components/NotificationPopover';
 import Footer from '@/components/Footer';
 import ThemeToggle from '@/components/ThemeToggle';
+import OnboardingHints from '@/components/OnboardingHints';
 
 const navGroups = [
   {
@@ -235,12 +236,14 @@ return (
           </div>
         </header>
 
-        <main className="flex-1">
+        <main id="main" className="flex-1 outline-none">
           {children}
         </main>
 
         <Footer />
       </div>
+
+      <OnboardingHints />
     </div>
   );
 }

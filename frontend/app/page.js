@@ -161,8 +161,7 @@ export default function Home() {
         </nav>
       </header>
 
-      <main>
-        {/* Hero Section */}
+<main id="main" className="outline-none">
         <section className="relative overflow-hidden bg-gradient-to-b from-slate-50 to-white pt-20 pb-32 sm:pt-28 sm:pb-40 lg:pt-32 lg:pb-48">
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full bg-teal-100/50 blur-3xl" />
