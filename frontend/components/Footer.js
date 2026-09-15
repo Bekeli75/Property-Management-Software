@@ -12,19 +12,20 @@ const footerLinks = {
     { label: 'Payments', href: '/payments', description: 'Rent collection & history' },
   ],
   Company: [
-    { label: 'About Us', href: '/about', description: 'Our mission & team' },
-    { label: 'Careers', href: '/careers', description: 'Join our team' },
-    { label: 'Contact', href: '/contact', description: 'Get in touch' },
+    { label: 'Properties', href: '/properties', description: 'Manage properties & units' },
+    { label: 'Maintenance', href: '/maintenance', description: 'Work order tracking' },
+    { label: 'Reports', href: '/reports', description: 'Occupancy & revenue insights' },
   ],
-  Resources: [
-    { label: 'Help Center', href: '/help', description: 'Guides & FAQs' },
-    { label: 'API Docs', href: '/docs', description: 'Developer documentation' },
-    { label: 'Status', href: '/status', description: 'System status' },
+  Workspace: [
+    { label: 'Dashboard', href: '/dashboard', description: 'At-a-glance overview' },
+    { label: 'Leases', href: '/leases', description: 'Lease agreements & terms' },
+    { label: 'Payments', href: '/payments', description: 'Rent collection & history' },
+    { label: 'Settings', href: '/settings', description: 'Workspace contact details' },
   ],
   Legal: [
-    { label: 'Privacy Policy', href: '/privacy', description: 'Data protection' },
-    { label: 'Terms of Service', href: '/terms', description: 'Terms & conditions' },
-    { label: 'Security', href: '/security', description: 'Security practices' },
+    { label: 'Contact', href: '/contact', description: 'Get in touch' },
+    { label: 'Privacy', href: '/privacy', description: 'Data protection' },
+    { label: 'Terms', href: '/terms', description: 'Terms of Service' },
   ],
 };
 
@@ -108,11 +109,11 @@ export default function Footer() {
             </ul>
           </nav>
 
-          {/* Resources */}
-          <nav aria-label="Resources links">
-            <h3 className="font-semibold text-slate-900 dark:text-white">Resources</h3>
+          {/* Workspace */}
+          <nav aria-label="Workspace links">
+            <h3 className="font-semibold text-slate-900 dark:text-white">Workspace</h3>
             <ul className="mt-4 space-y-3" role="list">
-              {footerLinks.Resources.map((item) => (
+              {footerLinks.Workspace.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition group">
                     <span>{item.label}</span>

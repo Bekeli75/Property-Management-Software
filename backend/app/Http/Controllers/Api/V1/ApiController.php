@@ -40,6 +40,19 @@ class ApiController extends Controller
     protected function authorizeUnitAccess(User $user, Unit $unit): void
     {
         $unit->loadMissing('property');
+
+        if ($user->isTenant()) {
+            $tenant = Tenant::where('user_id', $user->id)->first();
+            abort_unless($tenant, 403, 'You are not authorized to access this unit.');
+            $unit->loadMissing('activeLease');
+            abort_unless(
+                $unit->activeLease && $unit->activeLease->tenant_id === $tenant->id,
+                403,
+                'You are not authorized to access this unit.'
+            );
+            return;
+        }
+
         $this->authorizePropertyAccess($user, $unit->property);
     }
 

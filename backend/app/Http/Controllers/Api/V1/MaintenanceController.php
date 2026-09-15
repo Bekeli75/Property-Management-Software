@@ -131,13 +131,22 @@ class MaintenanceController extends ApiController
             'description' => 'sometimes|required|string',
             'priority' => 'sometimes|required|in:low,medium,high,urgent',
             'category' => 'sometimes|required|in:plumbing,electrical,structural,hvac,appliances,other',
-            'status' => 'sometimes|required|in:pending,in_progress,completed,cancelled',
             'scheduled_date' => 'nullable|date',
             'estimated_cost' => 'nullable|numeric',
-            'actual_cost' => 'nullable|numeric',
-            'notes' => 'nullable|string',
-            'assigned_to' => 'nullable|string',
         ]);
+
+        // Tenants may refine their own request details, but they cannot
+        // change status, assignment, or completion data. Those fields are
+        // managed through the dedicated assign/complete endpoints used by staff.
+        if (!$request->user()->isTenant()) {
+            $staffFields = $request->validate([
+                'status' => 'sometimes|required|in:pending,in_progress,completed,cancelled',
+                'actual_cost' => 'nullable|numeric',
+                'notes' => 'nullable|string',
+                'assigned_to' => 'nullable|string',
+            ]);
+            $validated = array_merge($validated, $staffFields);
+        }
 
         $maintenance->update($validated);
 
@@ -150,6 +159,9 @@ class MaintenanceController extends ApiController
     public function destroy(Request $request, Maintenance $maintenance)
     {
         $this->authorizeMaintenanceAccess($request->user(), $maintenance);
+        // Tenants may view and file requests but should not be able to
+        // permanently remove them from the record.
+        abort_unless(!$request->user()->isTenant(), 403, 'Tenants cannot delete maintenance requests.');
         $maintenance->delete();
 
         return $this->successResponse([], 'Maintenance request deleted successfully');

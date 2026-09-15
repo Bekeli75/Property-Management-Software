@@ -300,7 +300,7 @@ export default function PaymentsPage() {
               <option value="">Select a lease</option>
               {leases.map((lease) => (
                 <option key={lease.id} value={lease.id}>
-                  {tenantName(lease.tenant)} — Unit {lease.unit?.unit_number} (ETB {lease.monthly_rent?.toLocaleString()}/mo)
+                  {tenantName(lease.tenant)} — Unit {lease.unit?.unit_number} (ETB {Number(lease.monthly_rent || 0).toLocaleString()}/mo)
                 </option>
               ))}
             </select>
@@ -384,7 +384,7 @@ export default function PaymentsPage() {
               <option value="">Select a lease</option>
               {leases.map((lease) => (
                 <option key={lease.id} value={lease.id}>
-                  {tenantName(lease.tenant)} — Unit {lease.unit?.unit_number} (ETB {lease.monthly_rent?.toLocaleString()}/mo)
+                  {tenantName(lease.tenant)} — Unit {lease.unit?.unit_number} (ETB {Number(lease.monthly_rent || 0).toLocaleString()}/mo)
                 </option>
               ))}
             </select>

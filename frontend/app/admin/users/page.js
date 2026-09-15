@@ -12,7 +12,8 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import FormField from '@/components/ui/FormField';
 import Breadcrumb from '@/components/ui/Breadcrumb';
-import { Shield, Plus, User, UserCheck, UserX, Loader2, Trash2, ChevronRight, LayoutDashboard } from 'lucide-react';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { Shield, Plus, User, UserCheck, UserX, Loader2, Trash2 } from 'lucide-react';
 import EmptyState from '@/components/ui/EmptyState';
 
 const roleLabels = {
@@ -39,6 +40,7 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -110,8 +112,10 @@ export default function AdminUsersPage() {
   const handleDelete = async (account) => {
     setDeletingId(account.id);
     try {
-      await apiClient.deleteUser(account.id);
+      const response = await apiClient.deleteUser(account.id);
+      if (!response.success) throw new Error(response.message || 'Unable to delete this user.');
       setUsers((current) => current.filter((item) => item.id !== account.id));
+      setDeleteTarget(null);
       toast.success('User deleted.');
     } catch (deleteError) {
       toast.error(deleteError.message || 'Unable to delete this user.');
@@ -239,7 +243,7 @@ export default function AdminUsersPage() {
                                 </select>
                                 <button
                                   type="button"
-                                  onClick={() => handleDelete(account)}
+                                  onClick={() => setDeleteTarget(account)}
                                   disabled={deletingId === account.id}
                                   className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                                   aria-label={`Delete ${account.name}`}
@@ -328,6 +332,16 @@ export default function AdminUsersPage() {
           </Modal>
         </main>
       </AppShell>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete user account?"
+        message={`${deleteTarget ? deleteTarget.name : 'This user'} will lose all workspace access immediately. This action cannot be undone.`}
+        confirmLabel="Delete user"
+        loading={Boolean(deletingId)}
+        onConfirm={() => handleDelete(deleteTarget)}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </AuthGuard>
   );
 }

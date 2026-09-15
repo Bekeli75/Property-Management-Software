@@ -105,4 +105,24 @@ class UserController extends ApiController
 
         return $this->successResponse($user->only(['id', 'name', 'email', 'role', 'phone']), 'User role updated successfully');
     }
+
+    /**
+     * Remove an account (administrators only).
+     */
+    public function destroy(Request $request, User $user)
+    {
+        abort_unless($request->user()->isAdmin(), 403);
+
+        if ($user->isAdmin()) {
+            return $this->errorResponse('Administrator accounts cannot be deleted.', [], 422);
+        }
+
+        if ($user->isTenant() && $user->tenant) {
+            $user->tenant()->delete();
+        }
+
+        $user->delete();
+
+        return $this->successResponse([], 'User account deleted successfully');
+    }
 }

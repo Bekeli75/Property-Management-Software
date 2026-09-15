@@ -17,11 +17,13 @@ class TenantController extends ApiController
         $user = $request->user();
         
         // Allow fetching all tenants for lease creation (bypass role filtering)
-        $forLeaseCreation = $request->boolean('for_lease_creation');
-        
+        // For lease creation, staff may fetch any tenant to attach to a new lease.
+        // Tenants can never bypass the scoping.
+        $forLeaseCreation = $request->boolean('for_lease_creation') && !$user->isTenant();
+
         $query = Tenant::query();
-        
-        // Role-based filtering (skip for lease creation)
+
+        // Role-based filtering (skipped only for staff building a lease)
         if (!$forLeaseCreation) {
             if ($user->isTenant()) {
                 $query->where('user_id', $user->id);

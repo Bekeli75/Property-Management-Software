@@ -34,7 +34,7 @@ function formatDate(value) {
 }
 
 export default function MaintenancePage() {
-  const { user, isAuthenticated, isTenant, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, isOwner, isAdmin, isTenant, loading: authLoading } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [requests, setRequests] = useState([]);
@@ -46,6 +46,7 @@ export default function MaintenancePage() {
   const [properties, setProperties] = useState([]);
   const [units, setUnits] = useState([]);
   const [tenants, setTenants] = useState([]);
+  const [staff, setStaff] = useState([]);
   const [viewMode, setViewMode] = useState('grid');
   const [formData, setFormData] = useState(emptyForm);
   const [assigning, setAssigning] = useState(null);
@@ -88,18 +89,39 @@ export default function MaintenancePage() {
     }
   }, []);
 
-  const fetchUnitsForTenant = useCallback(async () => {
+  const fetchStaff = useCallback(async () => {
+    try {
+      const response = await apiClient.getUsers('manager');
+      if (response.success) setStaff(response.data);
+    } catch (error) {
+      console.error('Failed to fetch staff:', error);
+    }
+  }, []);
+
+  const fetchTenantUnits = useCallback(async () => {
     try {
       const response = await apiClient.getUnits();
       if (response.success) {
         const tenantId = user?.tenant?.id;
-        const tenantUnits = (response.data || []).filter((u) => u.activeLease?.tenant_id === tenantId);
-        setUnits(tenantUnits);
+        setUnits((response.data || []).filter((u) => u.activeLease?.tenant_id === tenantId));
       }
     } catch (error) {
       console.error('Failed to fetch units:', error);
     }
   }, [user]);
+
+  const fetchUnits = useCallback(async (propertyId) => {
+    try {
+      if (propertyId) {
+        const response = await apiClient.getUnitsByProperty(propertyId);
+        if (response.success) setUnits(response.data);
+      } else {
+        setUnits([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch units:', error);
+    }
+  }, []);
 
   useEffect(() => {
     if (authLoading) return undefined;
@@ -112,13 +134,14 @@ export default function MaintenancePage() {
       if (isStaff) {
         await fetchProperties();
         await fetchTenants();
+        await fetchStaff();
       } else if (isTenant) {
-        await fetchUnitsForTenant();
+        await fetchTenantUnits();
       }
     };
     load();
     return undefined;
-  }, [authLoading, isAuthenticated, isStaff, isTenant, router, fetchRequests, fetchProperties, fetchTenants, fetchUnitsForTenant]);
+  }, [authLoading, isAuthenticated, isStaff, isTenant, router, fetchRequests, fetchProperties, fetchTenants, fetchStaff, fetchTenantUnits]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -409,7 +432,10 @@ export default function MaintenancePage() {
                 <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Property</label>
                 <select
                   value={formData.property_id}
-                  onChange={(e) => setFormData({ ...formData, property_id: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, property_id: e.target.value, unit_id: '', tenant_id: '' });
+                    fetchUnits(e.target.value || null);
+                  }}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
                 >
                   <option value="">Select a property</option>
@@ -545,8 +571,8 @@ export default function MaintenancePage() {
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
               >
                 <option value="">Select staff</option>
-                {tenants.map((tenant) => (
-                  <option key={tenant.id} value={tenant.name}>{tenant.name}</option>
+                {staff.map((member) => (
+                  <option key={member.id} value={member.name}>{member.name} ({member.email})</option>
                 ))}
               </select>
             </div>

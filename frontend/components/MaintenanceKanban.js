@@ -6,8 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import apiClient from '@/lib/api';
 import Badge from '@/components/ui/Badge';
-import Modal from '@/components/ui/Modal';
-import { Clock, XCircle } from 'lucide-react';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { Clock, XCircle, UserPlus, CheckCheck } from 'lucide-react';
 
 const statusOrder = ['pending', 'in_progress', 'completed', 'cancelled'];
 const statusLabels = {
@@ -40,11 +40,13 @@ const formatDate = (value) => {
   return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-export default function MaintenanceKanban({ initialRequests = [] }) {
+export default function MaintenanceKanban({ initialRequests = [], onAssign = null, onComplete = null }) {
   const router = useRouter();
-  const { isTenant } = useAuth();
+  const { isTenant, isOwner, isAdmin } = useAuth();
   const toast = useToast();
   const [updating, setUpdating] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [columns, setColumns] = useState(() =>
     statusOrder.map((status) => ({
       status,
@@ -54,8 +56,11 @@ export default function MaintenanceKanban({ initialRequests = [] }) {
     }))
   );
 
+  const canManage = !isTenant;
+  const canDelete = isAdmin || isOwner;
+
   const handleStatusChange = async (requestId, newStatus) => {
-    if (isTenant) {
+    if (!canManage) {
       toast.error('Tenants cannot change request status.');
       return;
     }
@@ -83,18 +88,25 @@ export default function MaintenanceKanban({ initialRequests = [] }) {
     }
   };
 
-  const handleDelete = async (requestId) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      const response = await apiClient.deleteMaintenanceRequest(requestId);
-      if (response.success !== false) {
+      const response = await apiClient.deleteMaintenanceRequest(deleteTarget.id);
+      if (response.success === false) {
+        toast.error(response.message || 'Unable to delete the request.');
+      } else {
         setColumns((prev) =>
-          prev.map((col) => ({ ...col, requests: col.requests.filter((r) => r.id !== requestId) }))
+          prev.map((col) => ({ ...col, requests: col.requests.filter((r) => r.id !== deleteTarget.id) }))
         );
+        setDeleteTarget(null);
         toast.success('Request deleted.');
       }
     } catch (error) {
       console.error('Failed to delete maintenance request:', error);
       toast.error('Unable to delete the request.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -113,12 +125,12 @@ export default function MaintenanceKanban({ initialRequests = [] }) {
             </div>
             <div
               className="min-h-[320px] flex-1 space-y-3 rounded-xl bg-slate-100/70 p-3 dark:bg-slate-800/50"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
+              onDragOver={canManage ? (e) => e.preventDefault() : undefined}
+              onDrop={canManage ? (e) => {
                 e.preventDefault();
                 const requestId = e.dataTransfer.getData('text/plain');
                 if (requestId) handleStatusChange(requestId, column.status);
-              }}
+              } : undefined}
             >
               {column.requests.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-center text-xs text-slate-400 dark:text-slate-500">
@@ -129,7 +141,7 @@ export default function MaintenanceKanban({ initialRequests = [] }) {
                 column.requests.map((request) => (
                   <div
                     key={request.id}
-                    draggable={!isTenant}
+                    draggable={canManage}
                     onDragStart={(e) => e.dataTransfer.setData('text/plain', String(request.id))}
                     className="card cursor-pointer p-4 transition hover:shadow-md"
                     onClick={() => router.push(`/maintenance/${request.id}`)}
@@ -163,8 +175,32 @@ export default function MaintenanceKanban({ initialRequests = [] }) {
                           <span className="truncate">Assigned: {request.assigned_to}</span>
                         )}
                       </div>
-                      {!isTenant && (
+                      {canManage && (
                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          {request.status === 'completed' || request.status === 'cancelled' ? null : (
+                            <button
+                              type="button"
+                              onClick={() => onAssign && onAssign(request)}
+                              className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-xs font-medium text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                              title="Assign staff"
+                              aria-label={`Assign ${request.title}`}
+                            >
+                              <UserPlus size={13} />
+                              Assign
+                            </button>
+                          )}
+                          {request.status === 'in_progress' && (
+                            <button
+                              type="button"
+                              onClick={() => onComplete && onComplete(request)}
+                              className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-xs font-medium text-emerald-600 transition hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                              title="Complete request"
+                              aria-label={`Complete ${request.title}`}
+                            >
+                              <CheckCheck size={13} />
+                              Complete
+                            </button>
+                          )}
                           <select
                             value={request.status}
                             onChange={(e) => handleStatusChange(request.id, e.target.value)}
@@ -177,15 +213,17 @@ export default function MaintenanceKanban({ initialRequests = [] }) {
                               </option>
                             ))}
                           </select>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(request.id)}
-                            className="p-1 text-slate-400 transition hover:text-red-600 dark:hover:text-red-400"
-                            aria-label="Delete request"
-                            disabled={updating === request.id}
-                          >
-                            <XCircle size={14} />
-                          </button>
+                          {canDelete && (
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(request)}
+                              className="p-1 text-slate-400 transition hover:text-red-600 dark:hover:text-red-400"
+                              aria-label={`Delete ${request.title}`}
+                              disabled={updating === request.id}
+                            >
+                              <XCircle size={14} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -196,6 +234,16 @@ export default function MaintenanceKanban({ initialRequests = [] }) {
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete maintenance request?"
+        message="This permanently removes the request and its photo attachments. This action cannot be undone."
+        confirmLabel="Delete request"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => !deleting && setDeleteTarget(null)}
+      />
     </div>
   );
 }

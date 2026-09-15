@@ -238,6 +238,10 @@ class ApiClient {
     return this.patch(`/users/${id}`, { role });
   }
 
+  async deleteUser(id) {
+    return this.delete(`/users/${id}`);
+  }
+
   // Properties
   async getProperties() {
     return this.get('/properties');

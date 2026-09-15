@@ -143,10 +143,8 @@ class PaymentController extends ApiController
 
         $reference = 'CHAPA-' . strtoupper(Str::random(12));
         
-        $chapaSecret = env('CHAPA_SECRET_KEY');
-        $chapaUrl = env('CHAPA_TEST_MODE') 
-            ? 'https://api.chapa.co/v1/transaction/initialize' 
-            : 'https://api.chapa.co/v1/transaction/initialize';
+        $chapaSecret = config('chapa.secret_key');
+        $chapaUrl = config('chapa.base_url') . '/transaction/initialize';
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $chapaSecret,
@@ -158,8 +156,8 @@ class PaymentController extends ApiController
             'last_name' => $validated['last_name'],
             'phone_number' => $validated['phone_number'],
             'tx_ref' => $reference,
-            'callback_url' => env('FRONTEND_URL') . '/payment/callback',
-            'return_url' => env('FRONTEND_URL') . '/payment/success',
+            'callback_url' => config('chapa.frontend_url') . '/payment/callback',
+            'return_url' => config('chapa.frontend_url') . '/payment/success',
             'customization' => [
                 'title' => 'Propentra Payment',
                 'description' => 'Property Rent Payment',
@@ -179,7 +177,7 @@ class PaymentController extends ApiController
                 'chapa_transaction_id' => $response->json()['data']['tx_ref'],
                 'chapa_status' => 'pending',
                 'chapa_response' => $response->json(),
-                'is_test_payment' => env('CHAPA_TEST_MODE', true),
+                'is_test_payment' => config('chapa.test_mode', true),
             ]);
 
             return $this->successResponse([
@@ -212,10 +210,8 @@ class PaymentController extends ApiController
             return $this->successResponse($payment, 'Payment was already verified');
         }
 
-        $chapaSecret = env('CHAPA_SECRET_KEY');
-        $chapaUrl = env('CHAPA_TEST_MODE') 
-            ? 'https://api.chapa.co/v1/transaction/verify/' . $reference
-            : 'https://api.chapa.co/v1/transaction/verify/' . $reference;
+        $chapaSecret = config('chapa.secret_key');
+        $chapaUrl = config('chapa.base_url') . '/transaction/verify/' . $reference;
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $chapaSecret,
