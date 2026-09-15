@@ -1,0 +1,201 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
+import apiClient from '@/lib/api';
+import Badge from '@/components/ui/Badge';
+import Modal from '@/components/ui/Modal';
+import { Clock, XCircle } from 'lucide-react';
+
+const statusOrder = ['pending', 'in_progress', 'completed', 'cancelled'];
+const statusLabels = {
+  pending: 'Pending',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+const statusColors = {
+  pending: 'amber',
+  in_progress: 'blue',
+  completed: 'emerald',
+  cancelled: 'slate',
+};
+const priorityColors = {
+  low: 'slate',
+  medium: 'amber',
+  high: 'red',
+  urgent: 'red',
+};
+const priorityLabels = {
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
+  urgent: 'Urgent',
+};
+
+const formatDate = (value) => {
+  if (!value) return '\u2014';
+  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+export default function MaintenanceKanban({ initialRequests = [] }) {
+  const router = useRouter();
+  const { isTenant } = useAuth();
+  const toast = useToast();
+  const [updating, setUpdating] = useState(null);
+  const [columns, setColumns] = useState(() =>
+    statusOrder.map((status) => ({
+      status,
+      label: statusLabels[status],
+      color: statusColors[status],
+      requests: initialRequests.filter((r) => r.status === status),
+    }))
+  );
+
+  const handleStatusChange = async (requestId, newStatus) => {
+    if (isTenant) {
+      toast.error('Tenants cannot change request status.');
+      return;
+    }
+    setUpdating(requestId);
+    try {
+      const response = await apiClient.updateMaintenanceRequest(requestId, { status: newStatus });
+      if (response.success) {
+        setColumns((prev) =>
+          prev.map((col) => {
+            if (col.status === newStatus) {
+              return { ...col, requests: [...col.requests.filter((r) => r.id !== requestId), response.data] };
+            }
+            return { ...col, requests: col.requests.filter((r) => r.id !== requestId) };
+          })
+        );
+        toast.success(`Moved to ${statusLabels[newStatus] || newStatus}.`);
+      } else {
+        toast.error(response.message || 'Unable to update the request.');
+      }
+    } catch (error) {
+      console.error('Failed to update maintenance request:', error);
+      toast.error('Unable to update the request.');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleDelete = async (requestId) => {
+    try {
+      const response = await apiClient.deleteMaintenanceRequest(requestId);
+      if (response.success !== false) {
+        setColumns((prev) =>
+          prev.map((col) => ({ ...col, requests: col.requests.filter((r) => r.id !== requestId) }))
+        );
+        toast.success('Request deleted.');
+      }
+    } catch (error) {
+      console.error('Failed to delete maintenance request:', error);
+      toast.error('Unable to delete the request.');
+    }
+  };
+
+  return (
+    <div className="mt-6 overflow-x-auto pb-4">
+      <div className="flex gap-4" style={{ minWidth: '1100px' }}>
+        {columns.map((column) => (
+          <div key={column.status} className="flex w-[300px] flex-shrink-0 flex-col">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge status={column.color}>{column.label}</Badge>
+                <span className="rounded-full bg-slate-200/70 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                  {column.requests.length}
+                </span>
+              </div>
+            </div>
+            <div
+              className="min-h-[320px] flex-1 space-y-3 rounded-xl bg-slate-100/70 p-3 dark:bg-slate-800/50"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const requestId = e.dataTransfer.getData('text/plain');
+                if (requestId) handleStatusChange(requestId, column.status);
+              }}
+            >
+              {column.requests.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center text-center text-xs text-slate-400 dark:text-slate-500">
+                  <p>No requests</p>
+                  <p className="mt-1">Drop cards here</p>
+                </div>
+              ) : (
+                column.requests.map((request) => (
+                  <div
+                    key={request.id}
+                    draggable={!isTenant}
+                    onDragStart={(e) => e.dataTransfer.setData('text/plain', String(request.id))}
+                    className="card cursor-pointer p-4 transition hover:shadow-md"
+                    onClick={() => router.push(`/maintenance/${request.id}`)}
+                  >
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                          {request.title}
+                        </h4>
+                        <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                          {request.property && request.property.name}
+                          {request.unit && request.unit.unit_number ? ` \u00B7 ${request.unit.unit_number}` : ''}
+                        </p>
+                      </div>
+                      <Badge status={priorityColors[request.priority] || 'slate'}>
+                        {priorityLabels[request.priority] || request.priority}
+                      </Badge>
+                    </div>
+
+                    <p className="mb-3 line-clamp-2 text-xs leading-4 text-slate-500 dark:text-slate-400">
+                      {request.description}
+                    </p>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                        <span className="flex items-center gap-1">
+                          <Clock size={12} />
+                          {formatDate(request.requested_date)}
+                        </span>
+                        {request.assigned_to_name && (
+                          <span className="truncate">Assigned: {request.assigned_to_name}</span>
+                        )}
+                      </div>
+                      {!isTenant && (
+                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={request.status}
+                            onChange={(e) => handleStatusChange(request.id, e.target.value)}
+                            disabled={updating === request.id}
+                            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                          >
+                            {statusOrder.map((s) => (
+                              <option key={s} value={s}>
+                                {statusLabels[s]}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(request.id)}
+                            className="p-1 text-slate-400 transition hover:text-red-600 dark:hover:text-red-400"
+                            aria-label="Delete request"
+                            disabled={updating === request.id}
+                          >
+                            <XCircle size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
